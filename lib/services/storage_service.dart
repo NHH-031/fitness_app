@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user_profile.dart';
+import '../models/chat_message.dart';
 import '../widgets/health_score_widget.dart';
 import 'firestore_service.dart';
 import 'gemini_service.dart';
@@ -20,6 +21,7 @@ class StorageService {
   static final ValueNotifier<int> foodUpdateNotifier = ValueNotifier<int>(0);
   static final ValueNotifier<int> workoutUpdateNotifier = ValueNotifier<int>(0);
   static final ValueNotifier<int> profileUpdateNotifier = ValueNotifier<int>(0);
+  static final ValueNotifier<int> chatUpdateNotifier = ValueNotifier<int>(0);
 
   static void notifyDataChanged() {
     dataUpdateNotifier.value++;
@@ -49,6 +51,11 @@ class StorageService {
 
   static void notifyProfileChanged() {
     profileUpdateNotifier.value++;
+    dataUpdateNotifier.value++;
+  }
+
+  static void notifyChatChanged() {
+    chatUpdateNotifier.value++;
     dataUpdateNotifier.value++;
   }
 
@@ -1894,6 +1901,134 @@ class StorageService {
     } catch (e) {
       debugPrint("Lỗi đọc lịch sử cân nặng: $e");
       return [];
+    }
+  }
+
+  // --- AI CHATBOT HISTORY (LOCAL CACHE + CLOUD FIRESTORE) ---
+
+  static const String _keyAiChatHistory = 'ai_chat_history';
+
+  /// Lưu tin nhắn AI Chat vào Local Cache (SharedPreferences)
+  static Future<void> saveLocalChatMessage(ChatMessage message) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final rawList = prefs.getStringList(_keyAiChatHistory) ?? [];
+      final list = rawList
+          .map((s) {
+            try {
+              return ChatMessage.fromJson(jsonDecode(s) as Map<String, dynamic>);
+            } catch (_) {
+              return null;
+            }
+          })
+          .whereType<ChatMessage>()
+          .toList();
+
+      final idx = list.indexWhere((m) => m.id == message.id);
+      if (idx >= 0) {
+        list[idx] = message;
+      } else {
+        list.add(message);
+      }
+
+      list.sort((a, b) => a.timestamp.compareTo(b.timestamp));
+
+      // Giữ tối đa 200 tin nhắn gần nhất trong local cache
+      final trimmed = list.length > 200 ? list.sublist(list.length - 200) : list;
+      final encoded = trimmed.map((m) => jsonEncode(m.toJson())).toList();
+      await prefs.setStringList(_keyAiChatHistory, encoded);
+      notifyChatChanged();
+    } catch (e) {
+      debugPrint("Lỗi lưu tin nhắn chat cục bộ: $e");
+    }
+  }
+
+  /// Lấy danh sách lịch sử tin nhắn AI Chat từ Local Cache
+  static Future<List<ChatMessage>> getLocalChatHistory({int limit = 100}) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final rawList = prefs.getStringList(_keyAiChatHistory) ?? [];
+      final list = rawList
+          .map((s) {
+            try {
+              return ChatMessage.fromJson(jsonDecode(s) as Map<String, dynamic>);
+            } catch (_) {
+              return null;
+            }
+          })
+          .whereType<ChatMessage>()
+          .toList();
+
+      list.sort((a, b) => a.timestamp.compareTo(b.timestamp));
+      if (list.length > limit) {
+        return list.sublist(list.length - limit);
+      }
+      return list;
+    } catch (e) {
+      debugPrint("Lỗi đọc lịch sử chat cục bộ: $e");
+      return [];
+    }
+  }
+
+  /// Lưu nhiều tin nhắn từ Cloud về Local Cache (dùng khi Sync)
+  static Future<void> saveMultipleLocalChatMessages(List<ChatMessage> messages) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final existing = await getLocalChatHistory(limit: 500);
+      final Map<String, ChatMessage> map = {for (var m in existing) m.id: m};
+
+      for (final m in messages) {
+        map[m.id] = m;
+      }
+
+      final combined = map.values.toList();
+      combined.sort((a, b) => a.timestamp.compareTo(b.timestamp));
+      final trimmed = combined.length > 200 ? combined.sublist(combined.length - 200) : combined;
+      final encoded = trimmed.map((m) => jsonEncode(m.toJson())).toList();
+      await prefs.setStringList(_keyAiChatHistory, encoded);
+      notifyChatChanged();
+    } catch (e) {
+      debugPrint("Lỗi đồng bộ nhiều tin nhắn chat: $e");
+    }
+  }
+
+  /// Xóa toàn bộ lịch sử AI Chat cục bộ
+  static Future<void> clearLocalChatHistory() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_keyAiChatHistory);
+      notifyChatChanged();
+    } catch (e) {
+      debugPrint("Lỗi xóa lịch sử chat cục bộ: $e");
+    }
+  }
+
+  /// Phương thức Hybrid tổng hợp: Lưu tin nhắn vừa vào Local vừa đẩy lên Cloud Firestore
+  static Future<void> saveChatMessage(ChatMessage message) async {
+    // 1. Lưu Local Cache ngay lập tức (hiển thị tức thì, bảo đảm hoạt động kể cả khi Offline/Guest mode)
+    await saveLocalChatMessage(message);
+
+    // 2. Nếu đã đăng nhập Firebase, tự động đẩy lên Cloud Firestore
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        await FirestoreService().saveChatMessage(message);
+      }
+    } catch (e) {
+      debugPrint("Lưu chat lên Cloud Firestore bỏ qua hoặc thất bại: $e");
+    }
+  }
+
+  /// Phương thức Hybrid tổng hợp: Xóa lịch sử trên cả Local và Cloud Firestore
+  static Future<void> clearAllChatHistory() async {
+    await clearLocalChatHistory();
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        await FirestoreService().clearChatHistory();
+      }
+    } catch (e) {
+      debugPrint("Xóa chat trên Cloud Firestore lỗi: $e");
     }
   }
 }

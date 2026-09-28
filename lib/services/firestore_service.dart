@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user_profile.dart';
+import '../models/chat_message.dart';
 import 'storage_service.dart';
 
 class FirestoreService {
@@ -218,6 +219,68 @@ class FirestoreService {
     }
   }
 
+  // --- AI CHAT HISTORY ---
+
+  Future<void> saveChatMessage(ChatMessage message) async {
+    final doc = _userDoc;
+    if (doc == null) return;
+    try {
+      await doc
+          .collection('ai_chat_history')
+          .doc(message.id)
+          .set(message.toFirestore(), SetOptions(merge: true));
+    } catch (e) {
+      debugPrint('Firestore saveChatMessage error: $e');
+    }
+  }
+
+  Future<List<ChatMessage>> getChatHistory({int limit = 100}) async {
+    final doc = _userDoc;
+    if (doc == null) return [];
+    try {
+      final querySnapshot = await doc
+          .collection('ai_chat_history')
+          .orderBy('timestamp', descending: false)
+          .limit(limit)
+          .get();
+      return querySnapshot.docs
+          .map((d) => ChatMessage.fromFirestore(d.data()))
+          .toList();
+    } catch (e) {
+      debugPrint('Firestore getChatHistory error: $e');
+      return [];
+    }
+  }
+
+  Stream<List<ChatMessage>> streamChatHistory({int limit = 100}) {
+    final doc = _userDoc;
+    if (doc == null) return const Stream.empty();
+    return doc
+        .collection('ai_chat_history')
+        .orderBy('timestamp', descending: false)
+        .limit(limit)
+        .snapshots()
+        .map((snapshot) =>
+            snapshot.docs.map((d) => ChatMessage.fromFirestore(d.data())).toList());
+  }
+
+  Future<void> clearChatHistory() async {
+    final doc = _userDoc;
+    if (doc == null) return;
+    try {
+      final snapshot = await doc.collection('ai_chat_history').get();
+      final batch = _firestore?.batch();
+      if (batch != null) {
+        for (final d in snapshot.docs) {
+          batch.delete(d.reference);
+        }
+        await batch.commit();
+      }
+    } catch (e) {
+      debugPrint('Firestore clearChatHistory error: $e');
+    }
+  }
+
   // --- SYNC BETWEEN LOCAL (SharedPreferences) AND CLOUD (Firestore) ---
 
   /// Sau khi user đăng nhập, kiểm tra nếu cloud chưa có dữ liệu thì đẩy dữ liệu local lên cloud,
@@ -290,6 +353,12 @@ class FirestoreService {
       await saveWaterData(log.date, log.volumeMl, log.cups);
     }
 
+    // 7. AI Chat History
+    final localChats = await StorageService.getLocalChatHistory();
+    for (final chat in localChats) {
+      await saveChatMessage(chat);
+    }
+
     debugPrint('Đã đồng bộ toàn bộ dữ liệu local lên Cloud Firestore thành công.');
   }
 
@@ -352,6 +421,12 @@ class FirestoreService {
         }
         await prefs.setStringList('daily_water_history', encoded);
       }
+    }
+
+    // 6. AI Chat History
+    final cloudChats = await getChatHistory();
+    if (cloudChats.isNotEmpty) {
+      await StorageService.saveMultipleLocalChatMessages(cloudChats);
     }
 
     debugPrint('Đã tải và cập nhật dữ liệu từ Cloud Firestore về máy thành công.');

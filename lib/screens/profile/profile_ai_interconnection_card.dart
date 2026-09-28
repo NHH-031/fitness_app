@@ -3,6 +3,7 @@ import 'package:hugeicons/hugeicons.dart';
 import '../../models/user_profile.dart';
 import '../../services/locale_service.dart';
 import '../../theme.dart';
+import '../ai_chat_history_screen.dart';
 
 class ProfileAiInterconnectionCard extends StatelessWidget {
   final UserProfile profile;
@@ -82,6 +83,42 @@ class ProfileAiInterconnectionCard extends StatelessWidget {
               'bmr': profile.bmr.round().toString(),
             }),
             hugeIcon: HugeIcons.strokeRoundedHome01,
+          ),
+          const Divider(height: 24, color: Colors.white10),
+          GestureDetector(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const AiChatHistoryScreen(),
+                ),
+              );
+            },
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+              decoration: BoxDecoration(
+                color: const Color(0xFF9D00FF).withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFF9D00FF).withValues(alpha: 0.3)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.history_rounded, color: Color(0xFF00F0FF), size: 16),
+                  const SizedBox(width: 8),
+                  Text(
+                    LocaleService.tr('view_chat_history_btn'),
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const Spacer(),
+                  const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white38, size: 12),
+                ],
+              ),
+            ),
           ),
         ],
       ),

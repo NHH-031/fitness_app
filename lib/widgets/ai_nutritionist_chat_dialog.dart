@@ -1,5 +1,8 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../models/user_profile.dart';
+import '../models/chat_message.dart';
+import '../screens/ai_chat_history_screen.dart';
 import '../theme.dart';
 import '../services/gemini_service.dart';
 import '../services/storage_service.dart';
@@ -26,7 +29,7 @@ class _AiNutritionistChatDialogState extends State<AiNutritionistChatDialog> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
 
-  late final List<Map<String, String>> _messages;
+  List<Map<String, String>> _messages = [];
 
   bool _isSending = false;
   Map<String, dynamic> _todayStats = {};
@@ -58,6 +61,17 @@ class _AiNutritionistChatDialogState extends State<AiNutritionistChatDialog> {
       },
     ];
     _loadStats();
+    _loadChatHistory();
+  }
+
+  Future<void> _loadChatHistory() async {
+    final history = await StorageService.getLocalChatHistory(limit: 50);
+    if (history.isNotEmpty && mounted) {
+      setState(() {
+        _messages = history.map((m) => {'role': m.role, 'text': m.text}).toList();
+      });
+      WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
+    }
   }
 
   @override
@@ -99,6 +113,14 @@ class _AiNutritionistChatDialogState extends State<AiNutritionistChatDialog> {
     final query = text.trim();
     if (query.isEmpty || _isSending) return;
 
+    final userMsg = ChatMessage(
+      id: '${DateTime.now().millisecondsSinceEpoch}_u',
+      role: 'user',
+      text: query,
+      timestamp: DateTime.now(),
+    );
+    unawaited(StorageService.saveChatMessage(userMsg));
+
     _messageController.clear();
     setState(() {
       _messages.add({'role': 'user', 'text': query});
@@ -114,6 +136,14 @@ class _AiNutritionistChatDialogState extends State<AiNutritionistChatDialog> {
         history: _messages,
         userProfile: _userProfile,
       );
+
+      final modelMsg = ChatMessage(
+        id: '${DateTime.now().millisecondsSinceEpoch}_m',
+        role: 'model',
+        text: response,
+        timestamp: DateTime.now(),
+      );
+      unawaited(StorageService.saveChatMessage(modelMsg));
 
       if (mounted) {
         setState(() {
@@ -219,9 +249,25 @@ class _AiNutritionistChatDialogState extends State<AiNutritionistChatDialog> {
                     ),
                   ],
                 ),
-                IconButton(
-                  icon: const Icon(Icons.close_rounded, color: Colors.white54),
-                  onPressed: () => Navigator.pop(context),
+                Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.history_rounded, color: Color(0xFF00F0FF)),
+                      tooltip: LocaleService.tr('chat_history_title'),
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const AiChatHistoryScreen(),
+                          ),
+                        );
+                      },
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close_rounded, color: Colors.white54),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ],
                 ),
               ],
             ),

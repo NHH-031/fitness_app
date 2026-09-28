@@ -6,6 +6,7 @@ import '../widgets/macro_donut_chart_widget.dart';
 import '../widgets/meal_category_card_widget.dart';
 import '../widgets/hydration_wave_widget.dart';
 import '../widgets/ai_nutritionist_chat_dialog.dart';
+import 'ai_chat_history_screen.dart';
 
 class FoodScreen extends StatefulWidget {
   const FoodScreen({super.key});
@@ -117,6 +118,34 @@ class _FoodScreenState extends State<FoodScreen> {
                           overflow: TextOverflow.ellipsis,
                         ),
                       ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  // Chat AI History Button
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const AiChatHistoryScreen(),
+                        ),
+                      );
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.all(9),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: const Color(0xFF00F0FF).withValues(alpha: 0.35),
+                          width: 1,
+                        ),
+                      ),
+                      child: const HugeIcon(
+                        icon: HugeIcons.strokeRoundedClock01,
+                        color: Color(0xFF00F0FF),
+                        size: 16,
+                      ),
                     ),
                   ),
                   const SizedBox(width: 8),
