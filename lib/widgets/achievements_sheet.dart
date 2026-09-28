@@ -11,11 +11,8 @@ class AchievementsSheet extends StatefulWidget {
   const AchievementsSheet({super.key});
 
   static Future<void> show(BuildContext context) {
-    AppHaptics.medium();
-    return showModalBottomSheet(
+    return AppBottomSheet.show(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
       builder: (ctx) => const AchievementsSheet(),
     );
   }
@@ -77,17 +74,7 @@ class _AchievementsSheetState extends State<AchievementsSheet> {
       child: Column(
         children: [
           // Drag Handle
-          Center(
-            child: Container(
-              margin: const EdgeInsets.only(top: 12, bottom: 8),
-              width: 44,
-              height: 4.5,
-              decoration: BoxDecoration(
-                color: Colors.white24,
-                borderRadius: BorderRadius.circular(3),
-              ),
-            ),
-          ),
+          const BottomSheetDragHandle(color: Color(0x66FFD700)),
 
           // Header
           Padding(

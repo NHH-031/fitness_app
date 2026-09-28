@@ -3,6 +3,8 @@ import '../theme.dart';
 import '../services/storage_service.dart';
 import '../services/locale_service.dart';
 import '../utils/app_formatters.dart';
+import '../utils/app_haptics.dart';
+import 'app_ui_components.dart';
 
 class StepHistorySheet extends StatefulWidget {
   final int goalSteps;
@@ -19,10 +21,8 @@ class StepHistorySheet extends StatefulWidget {
     int goalSteps = 10000,
     Function(DateTime)? onDateSelected,
   }) {
-    showModalBottomSheet(
+    AppBottomSheet.show(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
       builder: (ctx) => StepHistorySheet(
         goalSteps: goalSteps,
         onDateSelected: onDateSelected,
@@ -113,16 +113,8 @@ class _StepHistorySheetState extends State<StepHistorySheet> {
       child: Column(
         children: [
           // Drag Handle
-          const SizedBox(height: 12),
-          Container(
-            width: 44,
-            height: 4,
-            decoration: BoxDecoration(
-              color: Colors.white24,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          const SizedBox(height: 16),
+          const BottomSheetDragHandle(),
+          const SizedBox(height: 4),
 
           // Header
           Padding(
@@ -255,6 +247,7 @@ class _StepHistorySheetState extends State<StepHistorySheet> {
 
                           return InkWell(
                             onTap: () {
+                              AppHaptics.selection();
                               final d = DateTime.tryParse(item.date);
                               if (d != null && widget.onDateSelected != null) {
                                 widget.onDateSelected!(d);

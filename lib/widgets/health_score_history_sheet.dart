@@ -3,6 +3,8 @@ import '../theme.dart';
 import '../services/storage_service.dart';
 import '../services/locale_service.dart';
 import '../utils/app_formatters.dart';
+import '../utils/app_haptics.dart';
+import 'app_ui_components.dart';
 import 'health_score_widget.dart';
 
 class HealthScoreHistorySheet extends StatefulWidget {
@@ -14,10 +16,8 @@ class HealthScoreHistorySheet extends StatefulWidget {
   });
 
   static void show(BuildContext context, {Function(DateTime)? onDateSelected}) {
-    showModalBottomSheet(
+    AppBottomSheet.show(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
       builder: (ctx) => HealthScoreHistorySheet(onDateSelected: onDateSelected),
     );
   }
@@ -106,16 +106,8 @@ class _HealthScoreHistorySheetState extends State<HealthScoreHistorySheet> {
       child: Column(
         children: [
           // Drag Handle
-          const SizedBox(height: 12),
-          Container(
-            width: 44,
-            height: 4,
-            decoration: BoxDecoration(
-              color: Colors.white24,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          const SizedBox(height: 16),
+          const BottomSheetDragHandle(),
+          const SizedBox(height: 4),
 
           // Header
           Padding(
@@ -245,6 +237,7 @@ class _HealthScoreHistorySheetState extends State<HealthScoreHistorySheet> {
 
                           return InkWell(
                             onTap: () {
+                              AppHaptics.selection();
                               final d = DateTime.tryParse(item.date);
                               if (d != null && widget.onDateSelected != null) {
                                 widget.onDateSelected!(d);

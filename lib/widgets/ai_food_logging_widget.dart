@@ -8,6 +8,7 @@ import '../services/storage_service.dart';
 import '../services/locale_service.dart';
 import '../utils/app_haptics.dart';
 import '../services/achievement_service.dart';
+import 'app_ui_components.dart';
 
 class AiFoodLoggingWidget extends StatefulWidget {
   final VoidCallback? onFoodUpdated;
@@ -241,14 +242,12 @@ class _AiFoodLoggingWidgetState extends State<AiFoodLoggingWidget>
   }
 
   Future<void> _showImageSourceDialog() async {
-    showModalBottomSheet(
+    AppBottomSheet.show(
       context: context,
       useRootNavigator: true,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
       builder: (ctx) {
         return Container(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
           decoration: const BoxDecoration(
             color: Color(0xFF161A26),
             borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
@@ -256,15 +255,8 @@ class _AiFoodLoggingWidgetState extends State<AiFoodLoggingWidget>
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.white24,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(height: 18),
+              const BottomSheetDragHandle(),
+              const SizedBox(height: 10),
               Text(
                 LocaleService.tr('scan_photo_title'),
                 style: const TextStyle(
@@ -420,15 +412,13 @@ class _AiFoodLoggingWidgetState extends State<AiFoodLoggingWidget>
     final carbsCtrl = TextEditingController(text: '${food.carbs}');
     final fatCtrl = TextEditingController(text: '${food.fat}');
 
-    await showModalBottomSheet(
+    await AppBottomSheet.show(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
       builder: (ctx) {
         return Padding(
           padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
           child: Container(
-            padding: const EdgeInsets.all(22),
+            padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
             decoration: const BoxDecoration(
               color: Color(0xFF131722),
               borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
@@ -438,17 +428,8 @@ class _AiFoodLoggingWidgetState extends State<AiFoodLoggingWidget>
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Center(
-                    child: Container(
-                      width: 40,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: Colors.white24,
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
+                  const BottomSheetDragHandle(),
+                  const SizedBox(height: 8),
                   Row(
                     children: [
                       ClipRRect(

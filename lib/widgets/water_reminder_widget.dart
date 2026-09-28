@@ -135,6 +135,7 @@ class _WaterReminderWidgetState extends State<WaterReminderWidget>
   }
 
   Future<void> _toggleReminder(bool value) async {
+    AppHaptics.selection();
     setState(() {
       _isEnabled = value;
     });
@@ -195,6 +196,7 @@ class _WaterReminderWidgetState extends State<WaterReminderWidget>
   }
 
   Future<void> _changeInterval(int hours) async {
+    AppHaptics.selection();
     setState(() {
       _intervalHours = hours;
     });
@@ -268,10 +270,8 @@ class _WaterReminderWidgetState extends State<WaterReminderWidget>
   }
 
   void _showWaterHistoryModal() {
-    showModalBottomSheet(
+    AppBottomSheet.show(
       context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
       builder: (ctx) {
         return Container(
           height: MediaQuery.of(context).size.height * 0.72,
@@ -284,16 +284,7 @@ class _WaterReminderWidgetState extends State<WaterReminderWidget>
           ),
           child: Column(
             children: [
-              const SizedBox(height: 12),
-              Container(
-                width: 48,
-                height: 5,
-                decoration: BoxDecoration(
-                  color: Colors.white24,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              ),
-              const SizedBox(height: 16),
+              const BottomSheetDragHandle(color: Color(0x6600C6FF)),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Row(

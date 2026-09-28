@@ -3,6 +3,7 @@ import '../services/locale_service.dart';
 import '../services/storage_service.dart';
 import '../screens/main_screen.dart';
 import 'health_score_widget.dart';
+import 'app_ui_components.dart';
 
 class HealthScoreBreakdownSheet extends StatefulWidget {
   final int currentSteps;
@@ -19,10 +20,8 @@ class HealthScoreBreakdownSheet extends StatefulWidget {
     int currentSteps = 0,
     DateTime? date,
   }) {
-    showModalBottomSheet(
+    AppBottomSheet.show(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
       builder: (ctx) => HealthScoreBreakdownSheet(
         currentSteps: currentSteps,
         date: date,
@@ -111,17 +110,7 @@ class _HealthScoreBreakdownSheetState extends State<HealthScoreBreakdownSheet> {
       child: Column(
         children: [
           // Drag handle
-          Center(
-            child: Container(
-              margin: const EdgeInsets.only(top: 12, bottom: 8),
-              width: 44,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.white24,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-          ),
+          const BottomSheetDragHandle(),
 
           // Header
           Padding(

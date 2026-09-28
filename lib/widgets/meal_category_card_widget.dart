@@ -9,6 +9,7 @@ import '../services/gemini_service.dart';
 import '../services/speech_service.dart';
 import '../services/storage_service.dart';
 import '../services/locale_service.dart';
+import '../utils/app_haptics.dart';
 import 'app_ui_components.dart';
 
 class MealCategoryCardWidget extends StatefulWidget {
@@ -85,10 +86,8 @@ class _MealCategoryCardWidgetState extends State<MealCategoryCardWidget> {
   }
 
   void _showAddFoodDialog() {
-    showModalBottomSheet(
+    AppBottomSheet.show(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
       builder: (ctx) => _AddFoodModal(
         mealType: widget.mealType,
         mealTitle: widget.title,
@@ -868,6 +867,8 @@ class _AddFoodModalState extends State<_AddFoodModal> {
       imagePath: _savedImagePath,
     );
 
+    AppHaptics.success();
+
     if (mounted) {
       Navigator.pop(context);
       widget.onAdded();
@@ -941,17 +942,8 @@ class _AddFoodModalState extends State<_AddFoodModal> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Drag handle
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.white24,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-            const SizedBox(height: 14),
+            const BottomSheetDragHandle(),
+            const SizedBox(height: 6),
 
             if (_recognizedFood != null) ...[
               // Recognized Food confirmation view directly in bottom sheet

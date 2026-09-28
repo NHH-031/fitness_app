@@ -7,15 +7,14 @@ import '../theme.dart';
 import '../services/gemini_service.dart';
 import '../services/storage_service.dart';
 import '../services/locale_service.dart';
+import 'app_ui_components.dart';
 
 class AiNutritionistChatDialog extends StatefulWidget {
   const AiNutritionistChatDialog({super.key});
 
   static void show(BuildContext context) {
-    showModalBottomSheet(
+    AppBottomSheet.show(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
       builder: (ctx) => const AiNutritionistChatDialog(),
     );
   }
@@ -192,16 +191,7 @@ class _AiNutritionistChatDialogState extends State<AiNutritionistChatDialog> {
       child: Column(
         children: [
           // Drag handle
-          const SizedBox(height: 12),
-          Container(
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-              color: Colors.white24,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          const SizedBox(height: 12),
+          const BottomSheetDragHandle(),
 
           // Header
           Padding(
@@ -284,7 +274,8 @@ class _AiNutritionistChatDialogState extends State<AiNutritionistChatDialog> {
               separatorBuilder: (_, _) => const SizedBox(width: 8),
               itemBuilder: (context, index) {
                 final suggestion = _quickSuggestions[index];
-                return GestureDetector(
+                return BouncingTap(
+                  hapticType: AppHapticFeedbackType.light,
                   onTap: _isSending ? null : () => _sendMessage(suggestion),
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -421,7 +412,8 @@ class _AiNutritionistChatDialogState extends State<AiNutritionistChatDialog> {
                   ),
                 ),
                 const SizedBox(width: 10),
-                GestureDetector(
+                BouncingTap(
+                  hapticType: AppHapticFeedbackType.medium,
                   onTap: _isSending
                       ? null
                       : () => _sendMessage(_messageController.text),

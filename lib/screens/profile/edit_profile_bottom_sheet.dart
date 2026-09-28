@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../../models/user_profile.dart';
 import '../../services/locale_service.dart';
 import '../../theme.dart';
+import '../../utils/app_haptics.dart';
+import '../../widgets/app_ui_components.dart';
 
 class EditProfileBottomSheet extends StatefulWidget {
   final UserProfile profile;
@@ -18,10 +20,8 @@ class EditProfileBottomSheet extends StatefulWidget {
     required UserProfile profile,
     required Function(UserProfile) onSaved,
   }) {
-    return showModalBottomSheet(
+    return AppBottomSheet.show(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
       builder: (ctx) => EditProfileBottomSheet(
         profile: profile,
         onSaved: onSaved,
@@ -92,6 +92,7 @@ class _EditProfileBottomSheetState extends State<EditProfileBottomSheet> {
 
   void _submit() {
     if (_formKey.currentState?.validate() ?? false) {
+      AppHaptics.success();
       final updated = widget.profile.copyWith(
         name: _nameController.text.trim(),
         gender: _gender,
@@ -118,7 +119,7 @@ class _EditProfileBottomSheetState extends State<EditProfileBottomSheet> {
       padding: EdgeInsets.only(
         left: AppSpacing.lg,
         right: AppSpacing.lg,
-        top: 20,
+        top: 8,
         bottom: MediaQuery.of(context).viewInsets.bottom + AppSpacing.lg,
       ),
       child: Form(
@@ -128,17 +129,8 @@ class _EditProfileBottomSheetState extends State<EditProfileBottomSheet> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.white24,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              const SizedBox(height: AppSpacing.md),
+              const BottomSheetDragHandle(),
+              const SizedBox(height: 4),
               Text(
                 LocaleService.tr('edit_profile_sheet_title'),
                 style: const TextStyle(
@@ -317,23 +309,29 @@ class _EditProfileBottomSheetState extends State<EditProfileBottomSheet> {
               const SizedBox(height: AppSpacing.lg),
 
               // Save Button
-              SizedBox(
-                width: double.infinity,
-                height: 52,
-                child: ElevatedButton(
-                  onPressed: _submit,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.info,
-                    foregroundColor: Colors.black,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(AppRadius.lg),
-                    ),
-                    elevation: 8,
-                    shadowColor: AppColors.info.withValues(alpha: 0.5),
+              BouncingTap(
+                hapticType: AppHapticFeedbackType.medium,
+                scaleDown: 0.97,
+                onTap: _submit,
+                child: Container(
+                  width: double.infinity,
+                  height: 52,
+                  decoration: BoxDecoration(
+                    color: AppColors.info,
+                    borderRadius: BorderRadius.circular(AppRadius.lg),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.info.withValues(alpha: 0.4),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
                   ),
+                  alignment: Alignment.center,
                   child: Text(
                     LocaleService.tr('save_profile_btn'),
                     style: const TextStyle(
+                      color: Colors.black,
                       fontSize: 15,
                       fontWeight: FontWeight.w900,
                       letterSpacing: 1.0,
@@ -354,7 +352,9 @@ class _EditProfileBottomSheetState extends State<EditProfileBottomSheet> {
     required bool isSelected,
     required VoidCallback onTap,
   }) {
-    return GestureDetector(
+    return BouncingTap(
+      hapticType: AppHapticFeedbackType.selection,
+      scaleDown: 0.95,
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 12),

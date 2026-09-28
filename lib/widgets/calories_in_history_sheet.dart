@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../services/locale_service.dart';
 import '../services/storage_service.dart';
 import '../screens/main_screen.dart';
+import 'app_ui_components.dart';
 
 class CaloriesInHistorySheet extends StatefulWidget {
   final DateTime? date;
@@ -12,10 +13,8 @@ class CaloriesInHistorySheet extends StatefulWidget {
   });
 
   static void show(BuildContext context, {DateTime? date}) {
-    showModalBottomSheet(
+    AppBottomSheet.show(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
       builder: (ctx) => CaloriesInHistorySheet(date: date),
     );
   }
@@ -209,17 +208,7 @@ class _CaloriesInHistorySheetState extends State<CaloriesInHistorySheet> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Drag handle
-            Center(
-              child: Container(
-                margin: const EdgeInsets.only(top: 12, bottom: 8),
-                width: 44,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.white24,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
+            const BottomSheetDragHandle(),
 
             // Top Header
             Padding(

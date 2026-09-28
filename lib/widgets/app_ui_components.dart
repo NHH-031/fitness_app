@@ -358,3 +358,137 @@ class LiquidDrinkButton extends StatelessWidget {
     );
   }
 }
+
+/// Thanh kéo chuẩn mực (Pill Handle) cho Bottom Sheet với phản hồi xúc giác.
+/// Khi chạm vào, rung xúc giác nhẹ và hỗ trợ đóng modal sheet nếu muốn.
+class BottomSheetDragHandle extends StatelessWidget {
+  final Color? color;
+  final double width;
+  final double height;
+  final EdgeInsetsGeometry padding;
+  final bool enableTapToClose;
+
+  const BottomSheetDragHandle({
+    super.key,
+    this.color,
+    this.width = 44,
+    this.height = 4.5,
+    this.padding = const EdgeInsets.only(top: 12, bottom: 10),
+    this.enableTapToClose = true,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: enableTapToClose
+          ? () {
+              AppHaptics.light();
+              Navigator.of(context).maybePop();
+            }
+          : null,
+      child: Padding(
+        padding: padding,
+        child: Center(
+          child: Container(
+            width: width,
+            height: height,
+            decoration: BoxDecoration(
+              color: color ?? Colors.white.withValues(alpha: 0.28),
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Khung chứa chuẩn hóa cao cấp cho Bottom Sheet (Squircle Glassmorphic Container)
+class AppBottomSheetContainer extends StatelessWidget {
+  final Widget child;
+  final double? height;
+  final Color? backgroundColor;
+  final Color? topBorderColor;
+  final double topRadius;
+  final EdgeInsetsGeometry? padding;
+  final bool showHandle;
+
+  const AppBottomSheetContainer({
+    super.key,
+    required this.child,
+    this.height,
+    this.backgroundColor,
+    this.topBorderColor,
+    this.topRadius = 28,
+    this.padding,
+    this.showHandle = true,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: height,
+      padding: padding,
+      decoration: BoxDecoration(
+        color: backgroundColor ?? const Color(0xFF141824),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(topRadius)),
+        border: Border(
+          top: BorderSide(
+            color: topBorderColor ?? const Color(0xFF00F0FF).withValues(alpha: 0.4),
+            width: 1.5,
+          ),
+        ),
+      ),
+      child: Column(
+        mainAxisSize: height == null ? MainAxisSize.min : MainAxisSize.max,
+        children: [
+          if (showHandle) const BottomSheetDragHandle(),
+          if (height != null) Expanded(child: child) else child,
+        ],
+      ),
+    );
+  }
+}
+
+/// Tiện ích hiển thị Modal Bottom Sheet chuẩn hóa trên toàn app kèm rung xúc giác (Haptic)
+class AppBottomSheet {
+  static Future<T?> show<T>({
+    required BuildContext context,
+    required WidgetBuilder builder,
+    bool isScrollControlled = true,
+    bool useRootNavigator = false,
+    Color backgroundColor = Colors.transparent,
+    bool enableDrag = true,
+    bool isDismissible = true,
+    AppHapticFeedbackType hapticType = AppHapticFeedbackType.medium,
+  }) {
+    switch (hapticType) {
+      case AppHapticFeedbackType.light:
+        AppHaptics.light();
+        break;
+      case AppHapticFeedbackType.medium:
+        AppHaptics.medium();
+        break;
+      case AppHapticFeedbackType.heavy:
+        AppHaptics.heavy();
+        break;
+      case AppHapticFeedbackType.selection:
+        AppHaptics.selection();
+        break;
+      case AppHapticFeedbackType.none:
+        break;
+    }
+
+    return showModalBottomSheet<T>(
+      context: context,
+      useRootNavigator: useRootNavigator,
+      isScrollControlled: isScrollControlled,
+      backgroundColor: backgroundColor,
+      enableDrag: enableDrag,
+      isDismissible: isDismissible,
+      builder: builder,
+    );
+  }
+}
+
