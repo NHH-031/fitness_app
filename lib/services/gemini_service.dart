@@ -38,8 +38,10 @@ class FoodInfo {
 }
 
 class GeminiService {
-  static const String _modelName = 'gemini-2.5-flash';
-  static String _runtimeApiKey = '';
+  static const String _modelName = 'gemini-3.8-flash';
+  static const String _fallbackModelName = 'gemini-flash-lite-latest';
+  static const String defaultApiKey = 'AIzaSyDXtnwTxaJRwvZtNgoEQ8yl0KzvGayb-jY';
+  static String _runtimeApiKey = defaultApiKey;
 
   /// Khóa Gemini API với thứ tự ưu tiên an toàn:
   /// 1. Biến môi trường lúc compile-time: --dart-define=GEMINI_API_KEY=... hoặc --dart-define-from-file=.env
@@ -47,8 +49,7 @@ class GeminiService {
   static String get apiKey {
     const envKey = String.fromEnvironment('GEMINI_API_KEY');
     if (envKey.isNotEmpty) return envKey;
-    if (_runtimeApiKey.isNotEmpty) return _runtimeApiKey;
-    return '';
+    return _runtimeApiKey;
   }
 
   /// Thiết lập API Key lúc runtime (ví dụ: load từ SharedPreferences hoặc cài đặt người dùng)
@@ -59,6 +60,39 @@ class GeminiService {
   /// Kiểm tra xem đã có API Key hợp lệ hay chưa
   static bool get hasValidApiKey =>
       apiKey.isNotEmpty && apiKey != 'YOUR_GEMINI_API_KEY_HERE';
+
+  /// Tạo instance GenerativeModel
+  static GenerativeModel _createModel({
+    String? modelName,
+    Content? systemInstruction,
+  }) {
+    return GenerativeModel(
+      model: modelName ?? _modelName,
+      apiKey: apiKey,
+      systemInstruction: systemInstruction,
+    );
+  }
+
+  /// Gọi API với cơ chế tự động chuyển sang model dự phòng nếu model chính gặp sự cố
+  static Future<GenerateContentResponse> _generateWithFallback(
+    List<Content> contents, {
+    Content? systemInstruction,
+  }) async {
+    try {
+      return await _createModel(
+        modelName: _modelName,
+        systemInstruction: systemInstruction,
+      ).generateContent(contents);
+    } catch (primaryErr) {
+      debugPrint(
+        "⚠️ [GeminiService] Model chính ($_modelName) lỗi: $primaryErr. Tự động chuyển đổi sang dự phòng ($_fallbackModelName)...",
+      );
+      return await _createModel(
+        modelName: _fallbackModelName,
+        systemInstruction: systemInstruction,
+      ).generateContent(contents);
+    }
+  }
 
   /// Trích xuất và phân tích JSON từ chuỗi phản hồi thô của Gemini
   static FoodInfo? parseFoodJson(String rawText) {
@@ -143,11 +177,6 @@ class GeminiService {
       return null;
     }
 
-    final model = GenerativeModel(
-      model: _modelName,
-      apiKey: apiKey,
-    );
-
     final prompt = '''
 You are a professional nutritionist. Analyze the following food description and estimate the nutritional values.
 Input: "$text"
@@ -163,7 +192,7 @@ MANDATORY: Return ONLY one valid JSON object matching the schema below without a
 ''';
 
     try {
-      final response = await model.generateContent([Content.text(prompt)]);
+      final response = await _generateWithFallback([Content.text(prompt)]);
       String? resText = response.text;
       if (resText != null) {
         final parsed = parseFoodJson(resText);
@@ -347,11 +376,6 @@ MANDATORY: Return ONLY one valid JSON object matching the schema below without a
     }
 
     try {
-      final model = GenerativeModel(
-        model: _modelName,
-        apiKey: apiKey,
-      );
-
       final prompt = '''
 You are a professional clinical dietitian and nutrition scientist.
 A user inputs their exact meal portions in grams:
@@ -374,7 +398,7 @@ MANDATORY: Return ONLY one valid JSON object matching the schema below without a
 }
 ''';
 
-      final response = await model.generateContent([Content.text(prompt)]).timeout(
+      final response = await _generateWithFallback([Content.text(prompt)]).timeout(
         const Duration(seconds: 12),
       );
 
@@ -421,11 +445,6 @@ MANDATORY: Return ONLY one valid JSON object matching the schema below without a
       return null;
     }
 
-    final model = GenerativeModel(
-      model: _modelName,
-      apiKey: apiKey,
-    );
-
     final mimeType = _detectMimeType(imageBytes);
 
     final prompt = '''
@@ -450,8 +469,7 @@ MANDATORY: Return ONLY a valid JSON object matching this exact schema:
           DataPart(mimeType, imageBytes),
         ])
       ];
-      final response = await model
-          .generateContent(content)
+      final response = await _generateWithFallback(content)
           .timeout(const Duration(seconds: 30));
 
       final resText = response.text;
@@ -519,12 +537,6 @@ Phong cách trả lời:
 ''';
 
     try {
-      final model = GenerativeModel(
-        model: _modelName,
-        apiKey: apiKey,
-        systemInstruction: Content.system(systemInstruction),
-      );
-
       final List<Content> chatHistory = [];
       if (history != null) {
         for (final msg in history) {
@@ -538,7 +550,10 @@ Phong cách trả lời:
 
       chatHistory.add(Content.text(message));
 
-      final response = await model.generateContent(chatHistory);
+      final response = await _generateWithFallback(
+        chatHistory,
+        systemInstruction: Content.system(systemInstruction),
+      );
       return response.text ?? "Xin lỗi, tôi chưa thể đưa ra câu trả lời lúc này. Bạn thử lại nhé!";
     } catch (e) {
       debugPrint("Nutritionist Chat Error: $e");
@@ -592,11 +607,7 @@ MANDATORY REQUIREMENT: Return ONLY a valid JSON object matching the exact struct
 
     if (hasValidApiKey) {
       try {
-        final model = GenerativeModel(
-          model: _modelName,
-          apiKey: apiKey,
-        );
-        final response = await model.generateContent([Content.text(prompt)]);
+        final response = await _generateWithFallback([Content.text(prompt)]);
         final raw = response.text;
         if (raw != null) {
           String cleanText = raw
@@ -745,11 +756,6 @@ MANDATORY REQUIREMENT: Return ONLY a valid JSON object matching the exact struct
 
     if (hasValidApiKey) {
       try {
-        final model = GenerativeModel(
-          model: _modelName,
-          apiKey: apiKey,
-        );
-
         final balanceText = calorieBalance < 0
             ? "thâm hụt ${calorieBalance.abs()} kcal"
             : (calorieBalance > 0
@@ -789,7 +795,7 @@ Ví dụ phong cách: "Hôm qua bạn thâm hụt 867 kcal rất tốt, nhưng m
 Ngôn ngữ: ${isVietnamese ? 'Tiếng Việt' : 'English'}
 ''';
 
-        final response = await model.generateContent([Content.text(prompt)]);
+        final response = await _generateWithFallback([Content.text(prompt)]);
         final text = response.text;
         if (text != null && text.isNotEmpty) {
           String cleanText = text

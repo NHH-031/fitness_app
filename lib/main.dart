@@ -17,6 +17,9 @@ void main() async {
   final customApiKey = await StorageService.getGeminiApiKey();
   if (customApiKey != null && customApiKey.isNotEmpty) {
     GeminiService.setApiKey(customApiKey);
+  } else {
+    GeminiService.setApiKey(GeminiService.defaultApiKey);
+    await StorageService.saveGeminiApiKey(GeminiService.defaultApiKey);
   }
   runApp(const FitnessTrackerApp());
 }
