@@ -1,0 +1,31 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Fitness Tracker (Debug with .env)",
+      "request": "launch",
+      "type": "dart",
+      "toolArgs": [
+        "--dart-define-from-file=.env"
+      ]
+    },
+    {
+      "name": "Fitness Tracker (Profile)",
+      "request": "launch",
+      "type": "dart",
+      "flutterMode": "profile",
+      "toolArgs": [
+        "--dart-define-from-file=.env"
+      ]
+    },
+    {
+      "name": "Fitness Tracker (Release)",
+      "request": "launch",
+      "type": "dart",
+      "flutterMode": "release",
+      "toolArgs": [
+        "--dart-define-from-file=.env"
+      ]
+    }
+  ]
+}
