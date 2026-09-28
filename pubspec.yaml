@@ -53,6 +53,9 @@ dependencies:
   flutter_animate: ^4.5.2
   figma_squircle: ^0.6.3
   hugeicons: ^1.2.0
+  sqflite: ^2.4.2+1
+  path: ^1.9.1
+  sqflite_common_ffi: ^2.4.0+3
 
 dev_dependencies:
   flutter_test:

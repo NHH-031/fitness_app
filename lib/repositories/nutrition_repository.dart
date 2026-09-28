@@ -1,0 +1,170 @@
+import 'package:sqflite/sqflite.dart';
+import '../database/app_database.dart';
+import '../models/food_log_entry.dart';
+import '../services/firestore_service.dart';
+
+/// Repository quản lý toàn bộ dữ liệu thực phẩm, dinh dưỡng và tính toán Macros (Protein/Carb/Fat).
+/// Sử dụng SQLite để đạt hiệu năng O(1) và giảm thiểu hoàn toàn gánh nặng I/O của SharedPreferences.
+class NutritionRepository {
+  NutritionRepository._();
+  static final NutritionRepository instance = NutritionRepository._();
+
+  // In-memory cache ngày tháng phục vụ việc hiển thị Dashboard tức thì
+  static Map<String, List<FoodLogEntry>>? _cachedFoodByDate;
+
+  /// Xóa sạch bộ nhớ cache ram
+  static void invalidateCache() {
+    _cachedFoodByDate = null;
+  }
+
+  static String _formatDate(DateTime dt) {
+    final y = dt.year.toString().padLeft(4, '0');
+    final m = dt.month.toString().padLeft(2, '0');
+    final d = dt.day.toString().padLeft(2, '0');
+    return '$y-$m-$d';
+  }
+
+  /// Thêm hoặc cập nhật một món ăn vào cơ sở dữ liệu SQLite và đồng bộ lên Firestore
+  Future<void> saveFoodLog(FoodLogEntry entry) async {
+    final dateStr = _formatDate(entry.timestamp);
+
+    final db = await AppDatabase.instance.database;
+    await db.insert(
+      'food_entries',
+      entry.toDbMap(),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+
+    // Cập nhật bộ nhớ cache ram
+    if (_cachedFoodByDate != null) {
+      _cachedFoodByDate!.putIfAbsent(dateStr, () => []).insert(0, entry);
+    }
+
+    // Đẩy lên Firestore
+    FirestoreService().saveFoodLog(entry);
+  }
+
+  /// Lấy toàn bộ danh sách các món ăn đã ghi nhận trong hệ thống
+  Future<List<FoodLogEntry>> getFoodLogs() async {
+    final db = await AppDatabase.instance.database;
+    final results = await db.query(
+      'food_entries',
+      orderBy: 'timestamp DESC',
+    );
+    return results.map((row) => FoodLogEntry.fromJson(row)).toList();
+  }
+
+  /// Lấy danh sách món ăn đã nạp trong ngày hôm nay
+  Future<List<FoodLogEntry>> getTodayFoodLogs() async {
+    final todayStr = _formatDate(DateTime.now());
+    return getFoodLogsByDateStr(todayStr);
+  }
+
+  /// Lấy danh sách món ăn theo đối tượng DateTime
+  Future<List<FoodLogEntry>> getFoodLogsByDate(DateTime date) async {
+    final dateStr = _formatDate(date);
+    return getFoodLogsByDateStr(dateStr);
+  }
+
+  /// Lấy danh sách món ăn theo chuỗi ngày YYYY-MM-DD
+  Future<List<FoodLogEntry>> getFoodLogsByDateStr(String dateStr) async {
+    if (_cachedFoodByDate != null && _cachedFoodByDate!.containsKey(dateStr)) {
+      return List.from(_cachedFoodByDate![dateStr]!);
+    }
+
+    final db = await AppDatabase.instance.database;
+    final results = await db.query(
+      'food_entries',
+      where: 'date = ?',
+      whereArgs: [dateStr],
+      orderBy: 'timestamp DESC',
+    );
+
+    final list = results.map((row) => FoodLogEntry.fromJson(row)).toList();
+    _cachedFoodByDate ??= {};
+    _cachedFoodByDate![dateStr] = list;
+    return list;
+  }
+
+  /// Xóa một món ăn theo ID
+  Future<void> deleteFoodLog(String id) async {
+    final db = await AppDatabase.instance.database;
+    await db.delete(
+      'food_entries',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+
+    // Cập nhật cache ram
+    if (_cachedFoodByDate != null) {
+      for (final dateKey in _cachedFoodByDate!.keys) {
+        _cachedFoodByDate![dateKey]!.removeWhere((item) => item.id == id);
+      }
+    }
+
+    FirestoreService().deleteFoodLog(id);
+  }
+
+  /// Tổng calo nạp vào hôm nay
+  Future<int> getTodayTotalCalories() async {
+    final logs = await getTodayFoodLogs();
+    int sum = 0;
+    for (final e in logs) {
+      sum += e.calories;
+    }
+    return sum;
+  }
+
+  /// Tổng protein nạp vào hôm nay (g)
+  Future<int> getTodayTotalProtein() async {
+    final logs = await getTodayFoodLogs();
+    int sum = 0;
+    for (final e in logs) {
+      sum += e.protein;
+    }
+    return sum;
+  }
+
+  /// Tổng carbs nạp vào hôm nay (g)
+  Future<int> getTodayTotalCarbs() async {
+    final logs = await getTodayFoodLogs();
+    int sum = 0;
+    for (final e in logs) {
+      sum += e.carbs;
+    }
+    return sum;
+  }
+
+  /// Tổng chất béo nạp vào hôm nay (g)
+  Future<int> getTodayTotalFat() async {
+    final logs = await getTodayFoodLogs();
+    int sum = 0;
+    for (final e in logs) {
+      sum += e.fat;
+    }
+    return sum;
+  }
+
+  /// Lấy tổng lượng calo nạp vào của một ngày bất kỳ
+  Future<int> getTotalCaloriesInByDate(DateTime date) async {
+    final logs = await getFoodLogsByDate(date);
+    int sum = 0;
+    for (final e in logs) {
+      sum += e.calories;
+    }
+    return sum;
+  }
+
+  /// Kiểm tra xem có món ăn nào trong ngày chỉ định không
+  Future<bool> hasFoodOnDate(DateTime date) async {
+    final logs = await getFoodLogsByDate(date);
+    return logs.isNotEmpty;
+  }
+
+  /// Xóa sạch dữ liệu thực phẩm trong SQLite
+  Future<void> clearAll() async {
+    final db = await AppDatabase.instance.database;
+    await db.delete('food_entries');
+    invalidateCache();
+  }
+}

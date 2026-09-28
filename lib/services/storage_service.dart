@@ -5,11 +5,23 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user_profile.dart';
 import '../models/chat_message.dart';
+import '../models/food_log_entry.dart';
+import '../models/daily_water_log.dart';
 import '../widgets/health_score_widget.dart';
 import 'firestore_service.dart';
 import 'gemini_service.dart';
 import 'locale_service.dart';
 import 'widget_sync_service.dart';
+
+export '../models/food_log_entry.dart';
+export '../models/daily_water_log.dart';
+export '../repositories/auth_repository.dart';
+export '../repositories/workout_repository.dart';
+export '../repositories/nutrition_repository.dart';
+export '../repositories/step_repository.dart';
+export '../repositories/water_repository.dart';
+export '../repositories/chat_repository.dart';
+export '../services/user_metrics_service.dart';
 
 class StorageService {
   // Master notification for general updates & backward compatibility
@@ -2111,71 +2123,6 @@ class StorageService {
   }
 }
 
-class FoodLogEntry {
-  final String id;
-  final String name;
-  final int calories;
-  final int protein;
-  final int carbs;
-  final int fat;
-  final DateTime timestamp;
-  final String mealType;
-  final String? imagePath;
-
-  const FoodLogEntry({
-    required this.id,
-    required this.name,
-    required this.calories,
-    required this.protein,
-    required this.carbs,
-    required this.fat,
-    required this.timestamp,
-    this.mealType = 'Breakfast',
-    this.imagePath,
-  });
-
-  static String inferMealType(DateTime time) {
-    final hour = time.hour;
-    if (hour >= 5 && hour < 11) {
-      return 'Breakfast';
-    } else if (hour >= 11 && hour < 16) {
-      return 'Lunch';
-    } else if (hour >= 17 && hour < 22) {
-      return 'Dinner';
-    } else {
-      return 'Snack';
-    }
-  }
-
-  factory FoodLogEntry.fromJson(Map<String, dynamic> json) {
-    final time = DateTime.tryParse(json['timestamp']?.toString() ?? '') ??
-        DateTime.now();
-    return FoodLogEntry(
-      id: json['id']?.toString() ?? '',
-      name: json['name']?.toString() ?? 'Food Item',
-      calories: (json['calories'] as num?)?.toInt() ?? 0,
-      protein: (json['protein'] as num?)?.toInt() ?? 0,
-      carbs: (json['carbs'] as num?)?.toInt() ?? 0,
-      fat: (json['fat'] as num?)?.toInt() ?? 0,
-      timestamp: time,
-      mealType: json['mealType']?.toString() ?? inferMealType(time),
-      imagePath: json['imagePath']?.toString(),
-    );
-  }
-
-  Map<String, dynamic> toJson() => {
-        'id': id,
-        'name': name,
-        'calories': calories,
-        'protein': protein,
-        'carbs': carbs,
-        'fat': fat,
-        'timestamp': timestamp.toIso8601String(),
-        'mealType': mealType,
-        'imagePath': imagePath,
-      };
-}
-
 class AchievementBadge {
   final String id;
   final String title;
@@ -2198,39 +2145,6 @@ class AchievementBadge {
     required this.progressText,
     required this.themeColor,
   });
-}
-
-class DailyWaterLog {
-  final String date;
-  final int cups;
-  final int volumeMl;
-  final DateTime updatedAt;
-
-  const DailyWaterLog({
-    required this.date,
-    required this.cups,
-    required this.volumeMl,
-    required this.updatedAt,
-  });
-
-  bool get isGoalReached => cups >= 8 || volumeMl >= 2000;
-
-  Map<String, dynamic> toJson() => {
-        'date': date,
-        'cups': cups,
-        'volumeMl': volumeMl,
-        'updatedAt': updatedAt.toIso8601String(),
-      };
-
-  factory DailyWaterLog.fromJson(Map<String, dynamic> json) {
-    return DailyWaterLog(
-      date: json['date']?.toString() ?? '',
-      cups: (json['cups'] as num?)?.toInt() ?? 0,
-      volumeMl: (json['volumeMl'] as num?)?.toInt() ?? 0,
-      updatedAt: DateTime.tryParse(json['updatedAt']?.toString() ?? '') ??
-          DateTime.now(),
-    );
-  }
 }
 
 class DailyActivitySummary {
