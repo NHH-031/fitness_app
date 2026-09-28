@@ -69,6 +69,10 @@ class StorageService {
     _cachedFoodByDate = null;
     _cachedWorkoutsByDate = null;
     _cachedDailyStepsMap = null;
+    _lastHardwareReading = null;
+    _lastReadingTime = null;
+    _lastPersistedSteps = null;
+    _lastPersistTime = null;
   }
 
   static const String _keyAppLanguage = 'app_language';
@@ -115,6 +119,8 @@ class StorageService {
   static DateTime? _lastReadingTime;
   static int? _lastPersistedSteps;
   static DateTime? _lastPersistTime;
+  @visibleForTesting
+  static bool disableAntiJitterForTesting = false;
 
   // --- QUẢN LÝ BƯỚC CHÂN BỀN VỮNG (PERSISTENT STEP TRACKING KỂ CẢ KHI TẮT APP) ---
   static Future<int> getTodaySteps() async {
@@ -175,7 +181,7 @@ class StorageService {
     // TRƯỜNG HỢP 3: Bộ lọc chống sốc / rung xe (Anti-Jitter / Cadence Rate Limiter)
     final now = DateTime.now();
     int sanitizedHardware = hardwareSteps;
-    if (_lastHardwareReading != null && _lastReadingTime != null) {
+    if (!disableAntiJitterForTesting && _lastHardwareReading != null && _lastReadingTime != null) {
       final elapsedMs = now.difference(_lastReadingTime!).inMilliseconds;
       final rawDiff = hardwareSteps - _lastHardwareReading!;
       if (elapsedMs > 0 && rawDiff > 0) {

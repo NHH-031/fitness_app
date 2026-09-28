@@ -10,6 +10,7 @@ class ExerciseGuideData {
   final String breathingTip;
   final IconData mainIcon;
   final Color themeColor;
+  final bool isDumbbell;
 
   const ExerciseGuideData({
     required this.title,
@@ -18,14 +19,249 @@ class ExerciseGuideData {
     required this.breathingTip,
     required this.mainIcon,
     required this.themeColor,
+    this.isDumbbell = false,
   });
 
   static ExerciseGuideData getForExercise(String title) {
     final lower = title.toLowerCase();
     final isVi = LocaleService.isVietnamese;
 
+    // Dumbbell 1: Chest Press / Floor Press
+    if (lower.contains('floor press') || lower.contains('bench press') || lower.contains('đẩy ngực')) {
+      return ExerciseGuideData(
+        title: isVi ? 'Đẩy ngực tạ đơn' : 'Dumbbell Floor/Bench Press',
+        targetMuscles: isVi
+            ? 'Cơ ngực lớn, bắp tay sau & cơ vai trước'
+            : 'Pectoralis Major, Triceps & Anterior Deltoids',
+        steps: isVi
+            ? [
+                'Nằm ngửa trên sàn hoặc ghế vát, hai tay cầm tạ ngang ngực, khuỷu tay mở góc 75 độ.',
+                'Gồng cơ bụng, dùng lực cơ ngực đẩy mạnh hai quả tạ thẳng lên trần nhà.',
+                'Siết chặt ngực ở đỉnh 1 giây, sau đó hạ tạ từ từ xuống có kiểm soát.',
+              ]
+            : [
+                'Lie flat on the floor or bench holding dumbbells at chest level with elbows at 75 degrees.',
+                'Brace core and press dumbbells forcefully upward toward the ceiling.',
+                'Squeeze chest at the top for 1 second, then lower down under control.',
+              ],
+        breathingTip: isVi
+            ? 'Hít sâu khi hạ tạ mở rộng lồng ngực - Thở mạnh ra khi đẩy tạ lên cao.'
+            : 'Inhale as you lower weights - Exhale forcefully as you press upward.',
+        mainIcon: Icons.fitness_center_rounded,
+        themeColor: const Color(0xFFFF2D55),
+        isDumbbell: true,
+      );
+    }
+    // Dumbbell 2: Shoulder Press
+    else if (lower.contains('shoulder press') || lower.contains('đẩy vai')) {
+      return ExerciseGuideData(
+        title: isVi ? 'Đẩy vai tạ đơn qua đầu' : 'Dumbbell Shoulder Press',
+        targetMuscles: isVi
+            ? 'Cơ vai toàn diện, cơ cầu vai & bắp tay sau'
+            : 'Deltoids, Trapezius & Triceps',
+        steps: isVi
+            ? [
+                'Đứng thẳng hoặc ngồi thẳng lưng, đưa hai quả tạ lên ngang tầm tai, lòng bàn tay hướng tới trước.',
+                'Đẩy tạ dứt khoát thẳng lên trên đỉnh đầu mà không khóa cứng khớp khuỷu tay.',
+                'Hạ tạ chậm rãi trong 2-3 giây về vị trí ngang tai rồi tiếp tục lần lặp tiếp theo.',
+              ]
+            : [
+                'Stand or sit upright with dumbbells at ear level, palms facing forward.',
+                'Press dumbbells smoothly straight overhead without locking out elbows.',
+                'Lower weights slowly over 2-3 seconds back to ear level.',
+              ],
+        breathingTip: isVi
+            ? 'Thở mạnh ra khi đẩy tạ qua đầu - Hít sâu vào khi hạ tạ về ngang tai.'
+            : 'Exhale powerfully on the overhead press - Inhale deeply as you lower dumbbells.',
+        mainIcon: Icons.fitness_center_rounded,
+        themeColor: const Color(0xFF007AFF),
+        isDumbbell: true,
+      );
+    }
+    // Dumbbell 3: Bent-Over Row
+    else if (lower.contains('row') || lower.contains('kéo tạ') || lower.contains('thon lưng') || lower.contains('lưng xô')) {
+      return ExerciseGuideData(
+        title: isVi ? 'Kéo tạ lưng xô' : 'Dumbbell Bent-Over Row',
+        targetMuscles: isVi
+            ? 'Cơ xô lưng, cơ trám, lưng giữa & thon gọn vùng nách'
+            : 'Latissimus Dorsi, Rhomboids, Mid Back & Underarm Tone',
+        steps: isVi
+            ? [
+                'Gập người ở khớp hông khoảng 45 độ, lưng thẳng tự nhiên, hai tay cầm tạ buông thẳng.',
+                'Kéo tạ hướng về phía mạn sườn, hướng khuỷu tay ra sau và siết chặt cơ lưng.',
+                'Dừng 1 nhịp ở đỉnh để co rút nhóm cơ xô rồi từ từ nhả tạ xuống.',
+              ]
+            : [
+                'Hinge forward at hips at a 45-degree angle, flat back, arms hanging naturally.',
+                'Drive elbows back toward your ribs, pulling dumbbells up and squeezing back muscles.',
+                'Pause briefly at peak contraction, then lower dumbbells with control.',
+              ],
+        breathingTip: isVi
+            ? 'Thở ra dứt khoát khi kéo tạ lên - Hít sâu vào khi duỗi tay hạ tạ.'
+            : 'Exhale as you pull weights toward hips - Inhale smoothly as you lower down.',
+        mainIcon: Icons.fitness_center_rounded,
+        themeColor: const Color(0xFF30D158),
+        isDumbbell: true,
+      );
+    }
+    // Dumbbell 4: Bicep Curls
+    else if (lower.contains('curl') || lower.contains('cuốn tạ') || lower.contains('tay trước') || lower.contains('thon bắp tay')) {
+      return ExerciseGuideData(
+        title: isVi ? 'Cuốn tạ tay trước' : 'Dumbbell Bicep Curls',
+        targetMuscles: isVi
+            ? 'Cơ bắp tay trước (Biceps) & cẳng tay'
+            : 'Biceps Brachii, Brachialis & Forearms',
+        steps: isVi
+            ? [
+                'Đứng thẳng, hai tay cầm tạ xuôi theo thân, lòng bàn tay hướng về phía trước.',
+                'Giữ khuỷu tay cố định sát sườn, cuộn tạ lên hướng về phía vai và siết căng bắp tay.',
+                'Giữ 1 giây ở điểm cao nhất rồi từ từ hạ tạ xuống trong 2 giây.',
+              ]
+            : [
+                'Stand tall with dumbbells at sides, palms facing forward.',
+                'Keep elbows tucked near ribs, curl dumbbells upward toward shoulders squeezing biceps.',
+                'Hold for 1 second at top contraction, then lower slowly over 2 seconds.',
+              ],
+        breathingTip: isVi
+            ? 'Thở ra khi cuộn tạ lên - Hít vào khi hạ tạ duỗi thẳng tay.'
+            : 'Exhale as you curl dumbbells up - Inhale as you lower arms down.',
+        mainIcon: Icons.fitness_center_rounded,
+        themeColor: const Color(0xFFFF9500),
+        isDumbbell: true,
+      );
+    }
+    // Dumbbell 5: Lateral Raises
+    else if (lower.contains('lateral') || lower.contains('dang tạ') || lower.contains('vai thon')) {
+      return ExerciseGuideData(
+        title: isVi ? 'Dang tạ ngang' : 'Dumbbell Lateral Raises',
+        targetMuscles: isVi
+            ? 'Cơ vai giữa (tạo bờ vai thanh thoát, tôn dáng chuẩn)'
+            : 'Lateral Deltoids (Shoulder Sculpting & Toning)',
+        steps: isVi
+            ? [
+                'Đứng thẳng, hơi khom người về trước một chút, cầm tạ đặt trước đùi.',
+                'Nâng hai cánh tay dang sang hai bên cho tới khi tạ ngang tầm vai.',
+                'Giữ khuỷu tay hơi cong nhẹ, hạ tạ từ từ xuống vị trí ban đầu.',
+              ]
+            : [
+                'Stand tall with slight forward torso tilt, dumbbells resting in front of thighs.',
+                'Raise arms out to sides until dumbbells reach shoulder level with slight elbow bend.',
+                'Lower weights down with slow tempo back to thighs.',
+              ],
+        breathingTip: isVi
+            ? 'Thở ra khi dang tạ sang hai bên - Hít vào khi hạ tạ xuống.'
+            : 'Exhale as you raise arms laterally - Inhale as you lower down.',
+        mainIcon: Icons.fitness_center_rounded,
+        themeColor: const Color(0xFFBF5AF2),
+        isDumbbell: true,
+      );
+    }
+    // Dumbbell 6: Romanian Deadlift (RDL)
+    else if (lower.contains('rdl') || lower.contains('deadlift')) {
+      return ExerciseGuideData(
+        title: isVi ? 'Deadlift tạ đơn (RDL)' : 'Dumbbell Romanian Deadlift (RDL)',
+        targetMuscles: isVi
+            ? 'Cơ đùi sau, cơ mông lớn & nhóm cơ thắt lưng dưới'
+            : 'Hamstrings, Gluteus Maximus & Spinal Erectors',
+        steps: isVi
+            ? [
+                'Đứng thẳng hai chân rộng bằng hông, hai tay cầm tạ trước đùi.',
+                'Đẩy hông ra phía sau, giữ lưng thẳng tắp, trượt tạ dọc theo ống đồng xuống qua gối.',
+                'Khi cảm nhận cơ đùi sau căng hết cỡ, siết chặt cơ mông và đẩy hông về phía trước đứng thẳng lên.',
+              ]
+            : [
+                'Stand feet hip-width apart holding dumbbells in front of thighs.',
+                'Push hips backward with flat back, sliding dumbbells down shins just past knees.',
+                'Feel hamstrings stretch, then drive hips forward and squeeze glutes to stand.',
+              ],
+        breathingTip: isVi
+            ? 'Hít sâu siết chặt cơ bụng khi gập hông - Thở dứt khoát khi đứng thẳng siết mông.'
+            : 'Inhale and brace core as you hinge back - Exhale powerfully as you stand tall.',
+        mainIcon: Icons.fitness_center_rounded,
+        themeColor: const Color(0xFFFF5252),
+        isDumbbell: true,
+      );
+    }
+    // Dumbbell 7: Sumo Squat / Goblet Squat with Dumbbell
+    else if (lower.contains('sumo') || (lower.contains('squat') && (lower.contains('ôm tạ') || lower.contains('goblet') || lower.contains('tạ')))) {
+      return ExerciseGuideData(
+        title: isVi ? 'Squat tạ đơn (Sumo / Goblet)' : 'Dumbbell Sumo / Goblet Squat',
+        targetMuscles: isVi
+            ? 'Cơ đùi trong, cơ mông & cơ đùi trước săn chắc'
+            : 'Inner Thighs (Adductors), Glutes & Quadriceps',
+        steps: isVi
+            ? [
+                'Đứng chân rộng hơn vai, mũi chân mở góc 45 độ, ôm tạ trước ngực hoặc cầm buông giữa hai chân.',
+                'Mở rộng đầu gối theo hướng mũi chân, hạ thấp hông sâu xuống mà vẫn giữ thẳng lưng.',
+                'Đạp mạnh gót chân đẩy người đứng lên và siết chặt vòng 3 ở đỉnh chuyển động.',
+              ]
+            : [
+                'Stand feet wider than shoulders, toes angled out 45 degrees, holding dumbbell at chest or center.',
+                'Track knees over toes, sinking hips deep into squat while keeping chest proud.',
+                'Drive through heels to stand upright and lock in glute squeeze at the top.',
+              ],
+        breathingTip: isVi
+            ? 'Hít sâu vào khi hạ mông xuống thấp - Thở mạnh ra khi đạp gót đứng lên.'
+            : 'Inhale on the deep squat descent - Exhale forcefully as you drive back up.',
+        mainIcon: Icons.fitness_center_rounded,
+        themeColor: const Color(0xFF34C759),
+        isDumbbell: true,
+      );
+    }
+    // Dumbbell 8: Overhead Triceps Extension
+    else if (lower.contains('triceps') || lower.contains('sau đầu') || lower.contains('tay sau')) {
+      return ExerciseGuideData(
+        title: isVi ? 'Đưa tạ sau đầu bắp tay sau' : 'Overhead Triceps Extension',
+        targetMuscles: isVi
+            ? 'Cơ tay sau (Triceps) - Loại bỏ mỡ bắp tay nhão'
+            : 'Triceps Brachii (Arm Toning & Firming)',
+        steps: isVi
+            ? [
+                'Đứng hoặc ngồi thẳng, dùng cả hai tay cầm chắc một quả tạ đưa thẳng lên qua đầu.',
+                'Giữ bắp tay cố định gần tai, chỉ gập khớp khuỷu tay để hạ tạ xuống phía sau đầu.',
+                'Dùng lực bắp tay sau duỗi thẳng cẳng tay đưa tạ trở lại vị trí ban đầu.',
+              ]
+            : [
+                'Stand or sit upright, holding one dumbbell with both hands extended directly overhead.',
+                'Keep upper arms locked near ears, bending only elbows to lower dumbbell behind head.',
+                'Contract triceps to extend arms straight back up to starting position.',
+              ],
+        breathingTip: isVi
+            ? 'Hít vào khi hạ tạ sau đầu - Thở ra mạnh mẽ khi duỗi thẳng tay lên.'
+            : 'Inhale as dumbbell lowers behind head - Exhale as you extend arms overhead.',
+        mainIcon: Icons.fitness_center_rounded,
+        themeColor: const Color(0xFFFF9500),
+        isDumbbell: true,
+      );
+    }
+    // Dumbbell 9: Dumbbell Glute Bridge / Hip Thrust
+    else if (lower.contains('hip thrust') || (lower.contains('cầu mông') && lower.contains('tạ'))) {
+      return ExerciseGuideData(
+        title: isVi ? 'Cầu mông đặt tạ đơn' : 'Dumbbell Hip Thrust / Glute Bridge',
+        targetMuscles: isVi
+            ? 'Kích hoạt tối đa cơ mông, làm cong mông & đùi sau'
+            : 'Gluteus Maximus Hypertrophy, Hips & Hamstrings',
+        steps: isVi
+            ? [
+                'Nằm ngửa gập gối, đặt quả tạ an toàn lên vùng xương chậu/hông và giữ nhẹ bằng hai tay.',
+                'Đạp mạnh gót chân đẩy hông lên cao hết biên độ, tạo đường thẳng từ gối tới vai.',
+                'Siết chặt mông hết cỡ ở vị trí cao nhất trong 2 giây rồi từ từ hạ xuống.',
+              ]
+            : [
+                'Lie flat with knees bent, holding dumbbell securely across pelvis/hip crease.',
+                'Drive forcefully through heels to thrust hips upward until knees, hips, and shoulders align.',
+                'Squeeze glutes with maximum tension for 2 seconds at the peak before lowering.',
+              ],
+        breathingTip: isVi
+            ? 'Thở mạnh ra khi đẩy hông lên - Hít vào khi hạ mông về sàn.'
+            : 'Exhale powerfully on hip thrust - Inhale smoothly as hips descend.',
+        mainIcon: Icons.fitness_center_rounded,
+        themeColor: const Color(0xFFFF2D55),
+        isDumbbell: true,
+      );
+    }
     // 1. Pull-ups
-    if (lower.contains('pull') || lower.contains('xà đơn')) {
+    else if (lower.contains('pull') || lower.contains('xà đơn')) {
       return ExerciseGuideData(
         title: isVi ? 'Hít xà đơn' : 'Pull-ups',
         targetMuscles: isVi
@@ -547,7 +783,25 @@ class _PosePainter extends CustomPainter {
       ..strokeCap = StrokeCap.round
       ..style = PaintingStyle.stroke;
 
-    if (lower.contains('pull') || lower.contains('xà đơn')) {
+    if (lower.contains('floor press') || lower.contains('bench press') || lower.contains('đẩy ngực')) {
+      _drawDumbbellFloorPress(canvas, size, limbPaint, jointPaint);
+    } else if (lower.contains('shoulder press') || lower.contains('đẩy vai')) {
+      _drawDumbbellShoulderPress(canvas, size, limbPaint, jointPaint);
+    } else if (lower.contains('curl') || lower.contains('cuốn tạ') || lower.contains('tay trước') || lower.contains('thon bắp tay')) {
+      _drawDumbbellCurl(canvas, size, limbPaint, jointPaint);
+    } else if (lower.contains('row') || lower.contains('kéo tạ') || lower.contains('thon lưng') || lower.contains('lưng xô')) {
+      _drawDumbbellRow(canvas, size, limbPaint, jointPaint);
+    } else if (lower.contains('lateral') || lower.contains('dang tạ') || lower.contains('vai thon')) {
+      _drawDumbbellLateralRaise(canvas, size, limbPaint, jointPaint);
+    } else if (lower.contains('rdl') || lower.contains('deadlift')) {
+      _drawDumbbellRDL(canvas, size, limbPaint, jointPaint);
+    } else if (lower.contains('triceps') || lower.contains('sau đầu') || lower.contains('tay sau')) {
+      _drawDumbbellTriceps(canvas, size, limbPaint, jointPaint);
+    } else if (lower.contains('hip thrust') || (lower.contains('cầu mông') && lower.contains('tạ'))) {
+      _drawGluteBridgeWithDumbbell(canvas, size, limbPaint, jointPaint);
+    } else if (lower.contains('sumo') || (lower.contains('squat') && (lower.contains('ôm tạ') || lower.contains('goblet') || lower.contains('tạ')))) {
+      _drawSquatWithDumbbell(canvas, size, limbPaint, jointPaint);
+    } else if (lower.contains('pull') || lower.contains('xà đơn')) {
       _drawPullUp(canvas, size, limbPaint, jointPaint);
     } else if (lower.contains('hít đất') || lower.contains('push')) {
       _drawPushUp(canvas, size, limbPaint, jointPaint);
@@ -920,6 +1174,292 @@ class _PosePainter extends CustomPainter {
     canvas.drawCircle(hip, 4, joint);
     canvas.drawCircle(leftHand, 4, joint);
     canvas.drawCircle(rightHand, 4, joint);
+  }
+
+  void _drawDumbbell(Canvas canvas, Offset handPos, {double angle = 0, double size = 15}) {
+    canvas.save();
+    canvas.translate(handPos.dx, handPos.dy);
+    canvas.rotate(angle);
+
+    final barPaint = Paint()
+      ..color = Colors.white70
+      ..strokeWidth = 2.5
+      ..strokeCap = StrokeCap.round;
+    canvas.drawLine(Offset(-size / 2, 0), Offset(size / 2, 0), barPaint);
+
+    final weightPaint = Paint()
+      ..color = const Color(0xFFFF9F0A)
+      ..style = PaintingStyle.fill;
+
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromCenter(center: Offset(-size / 2, 0), width: 4.5, height: 11),
+        const Radius.circular(2),
+      ),
+      weightPaint,
+    );
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromCenter(center: Offset(size / 2, 0), width: 4.5, height: 11),
+        const Radius.circular(2),
+      ),
+      weightPaint,
+    );
+    canvas.restore();
+  }
+
+  void _drawDumbbellCurl(Canvas canvas, Size size, Paint limb, Paint joint) {
+    final floorY = size.height * 0.78;
+    final curl = progress;
+
+    final feet = Offset(size.width * 0.50, floorY);
+    final knee = Offset(size.width * 0.50, floorY - 32);
+    final hip = Offset(size.width * 0.50, floorY - 58);
+    final shoulder = Offset(size.width * 0.50, hip.dy - 30);
+    final head = Offset(size.width * 0.50, shoulder.dy - 16);
+
+    canvas.drawLine(head, shoulder, limb);
+    canvas.drawLine(shoulder, hip, limb);
+    canvas.drawLine(hip, knee, limb);
+    canvas.drawLine(knee, feet, limb);
+
+    final leftElbow = Offset(shoulder.dx - 14, shoulder.dy + 22);
+    final rightElbow = Offset(shoulder.dx + 14, shoulder.dy + 22);
+
+    final handY = (shoulder.dy + 38) - curl * 32;
+    final handXOffset = 18 - curl * 6;
+    final leftHand = Offset(shoulder.dx - handXOffset, handY);
+    final rightHand = Offset(shoulder.dx + handXOffset, handY);
+
+    canvas.drawLine(shoulder, leftElbow, limb);
+    canvas.drawLine(leftElbow, leftHand, limb);
+    canvas.drawLine(shoulder, rightElbow, limb);
+    canvas.drawLine(rightElbow, rightHand, limb);
+
+    canvas.drawCircle(head, 9, joint);
+    canvas.drawCircle(shoulder, 4, joint);
+    canvas.drawCircle(hip, 4, joint);
+    canvas.drawCircle(leftElbow, 3, joint);
+    canvas.drawCircle(rightElbow, 3, joint);
+
+    _drawDumbbell(canvas, leftHand, angle: curl * 0.3);
+    _drawDumbbell(canvas, rightHand, angle: -curl * 0.3);
+  }
+
+  void _drawDumbbellShoulderPress(Canvas canvas, Size size, Paint limb, Paint joint) {
+    final floorY = size.height * 0.78;
+    final press = progress;
+
+    final feet = Offset(size.width * 0.50, floorY);
+    final knee = Offset(size.width * 0.50, floorY - 32);
+    final hip = Offset(size.width * 0.50, floorY - 58);
+    final shoulder = Offset(size.width * 0.50, hip.dy - 30);
+    final head = Offset(size.width * 0.50, shoulder.dy - 16);
+
+    canvas.drawLine(head, shoulder, limb);
+    canvas.drawLine(shoulder, hip, limb);
+    canvas.drawLine(hip, knee, limb);
+    canvas.drawLine(knee, feet, limb);
+
+    final earY = shoulder.dy - 4;
+    final overheadY = head.dy - 16;
+    final currentY = earY - press * (earY - overheadY);
+
+    final leftHand = Offset(shoulder.dx - 22 + press * 6, currentY);
+    final rightHand = Offset(shoulder.dx + 22 - press * 6, currentY);
+
+    final leftElbow = Offset(shoulder.dx - 20, shoulder.dy + 12 - press * 16);
+    final rightElbow = Offset(shoulder.dx + 20, shoulder.dy + 12 - press * 16);
+
+    canvas.drawLine(shoulder, leftElbow, limb);
+    canvas.drawLine(leftElbow, leftHand, limb);
+    canvas.drawLine(shoulder, rightElbow, limb);
+    canvas.drawLine(rightElbow, rightHand, limb);
+
+    canvas.drawCircle(head, 9, joint);
+    canvas.drawCircle(shoulder, 4, joint);
+    canvas.drawCircle(hip, 4, joint);
+    canvas.drawCircle(leftElbow, 3, joint);
+    canvas.drawCircle(rightElbow, 3, joint);
+
+    _drawDumbbell(canvas, leftHand, angle: 0);
+    _drawDumbbell(canvas, rightHand, angle: 0);
+  }
+
+  void _drawDumbbellFloorPress(Canvas canvas, Size size, Paint limb, Paint joint) {
+    final floorY = size.height * 0.78;
+    final press = progress;
+
+    final head = Offset(size.width * 0.25, floorY - 8);
+    final shoulder = Offset(size.width * 0.35, floorY - 8);
+    final hip = Offset(size.width * 0.55, floorY - 8);
+    final knee = Offset(size.width * 0.68, floorY - 32);
+    final feet = Offset(size.width * 0.76, floorY);
+
+    canvas.drawLine(head, shoulder, limb);
+    canvas.drawLine(shoulder, hip, limb);
+    canvas.drawLine(hip, knee, limb);
+    canvas.drawLine(knee, feet, limb);
+
+    final handY = floorY - 18 - (press * 28);
+    final elbow = Offset(size.width * 0.36, floorY - (press * 14));
+    final hand = Offset(size.width * 0.38, handY);
+
+    canvas.drawLine(shoulder, elbow, limb);
+    canvas.drawLine(elbow, hand, limb);
+
+    canvas.drawCircle(head, 9, joint);
+    canvas.drawCircle(shoulder, 4, joint);
+    canvas.drawCircle(hip, 4, joint);
+    canvas.drawCircle(knee, 4, joint);
+    canvas.drawCircle(feet, 4, joint);
+    canvas.drawCircle(elbow, 3, joint);
+
+    _drawDumbbell(canvas, hand, angle: 0);
+  }
+
+  void _drawDumbbellRow(Canvas canvas, Size size, Paint limb, Paint joint) {
+    final floorY = size.height * 0.78;
+    final pull = progress;
+
+    final feet = Offset(size.width * 0.40, floorY);
+    final knee = Offset(size.width * 0.44, floorY - 26);
+    final hip = Offset(size.width * 0.40, floorY - 48);
+    final shoulder = Offset(size.width * 0.60, floorY - 60);
+    final head = Offset(size.width * 0.68, floorY - 65);
+
+    canvas.drawLine(head, shoulder, limb);
+    canvas.drawLine(shoulder, hip, limb);
+    canvas.drawLine(hip, knee, limb);
+    canvas.drawLine(knee, feet, limb);
+
+    final handHangY = floorY - 26;
+    final handPullY = floorY - 50;
+    final handY = handHangY - pull * (handHangY - handPullY);
+    final elbow = Offset(size.width * 0.50, floorY - 40 - (pull * 22));
+    final hand = Offset(size.width * 0.54, handY);
+
+    canvas.drawLine(shoulder, elbow, limb);
+    canvas.drawLine(elbow, hand, limb);
+
+    canvas.drawCircle(head, 9, joint);
+    canvas.drawCircle(shoulder, 4, joint);
+    canvas.drawCircle(hip, 4, joint);
+    canvas.drawCircle(knee, 4, joint);
+    canvas.drawCircle(elbow, 3, joint);
+
+    _drawDumbbell(canvas, hand, angle: 0.3);
+  }
+
+  void _drawDumbbellLateralRaise(Canvas canvas, Size size, Paint limb, Paint joint) {
+    final floorY = size.height * 0.78;
+    final raise = progress;
+
+    final feet = Offset(size.width * 0.50, floorY);
+    final knee = Offset(size.width * 0.50, floorY - 32);
+    final hip = Offset(size.width * 0.50, floorY - 58);
+    final shoulder = Offset(size.width * 0.50, hip.dy - 30);
+    final head = Offset(size.width * 0.50, shoulder.dy - 16);
+
+    canvas.drawLine(head, shoulder, limb);
+    canvas.drawLine(shoulder, hip, limb);
+    canvas.drawLine(hip, knee, limb);
+    canvas.drawLine(knee, feet, limb);
+
+    final armLength = 32.0;
+    final angle = math.pi * 0.5 * (1.0 - raise);
+    final leftHand = Offset(shoulder.dx - math.cos(angle) * armLength - 8, shoulder.dy + math.sin(angle) * armLength);
+    final rightHand = Offset(shoulder.dx + math.cos(angle) * armLength + 8, shoulder.dy + math.sin(angle) * armLength);
+
+    canvas.drawLine(shoulder, leftHand, limb);
+    canvas.drawLine(shoulder, rightHand, limb);
+
+    canvas.drawCircle(head, 9, joint);
+    canvas.drawCircle(shoulder, 4, joint);
+    canvas.drawCircle(hip, 4, joint);
+
+    _drawDumbbell(canvas, leftHand, angle: 0.2);
+    _drawDumbbell(canvas, rightHand, angle: -0.2);
+  }
+
+  void _drawDumbbellRDL(Canvas canvas, Size size, Paint limb, Paint joint) {
+    final floorY = size.height * 0.78;
+    final hinge = progress;
+
+    final feet = Offset(size.width * 0.44, floorY);
+    final knee = Offset(size.width * 0.42, floorY - 28);
+    final hipX = size.width * 0.38 - (hinge * 12);
+    final hipY = floorY - 54 + (hinge * 6);
+    final hip = Offset(hipX, hipY);
+
+    final shoulderX = size.width * 0.48 + (hinge * 18);
+    final shoulderY = hip.dy - 30 + (hinge * 24);
+    final shoulder = Offset(shoulderX, shoulderY);
+    final head = Offset(shoulder.dx + 12, shoulder.dy - 10);
+
+    canvas.drawLine(head, shoulder, limb);
+    canvas.drawLine(shoulder, hip, limb);
+    canvas.drawLine(hip, knee, limb);
+    canvas.drawLine(knee, feet, limb);
+
+    final handY = shoulder.dy + 28;
+    final hand = Offset(shoulder.dx - 2, handY);
+    canvas.drawLine(shoulder, hand, limb);
+
+    canvas.drawCircle(head, 9, joint);
+    canvas.drawCircle(shoulder, 4, joint);
+    canvas.drawCircle(hip, 4, joint);
+    canvas.drawCircle(knee, 4, joint);
+
+    _drawDumbbell(canvas, hand, angle: 0.15);
+  }
+
+  void _drawDumbbellTriceps(Canvas canvas, Size size, Paint limb, Paint joint) {
+    final floorY = size.height * 0.78;
+    final extend = progress;
+
+    final feet = Offset(size.width * 0.50, floorY);
+    final knee = Offset(size.width * 0.50, floorY - 32);
+    final hip = Offset(size.width * 0.50, floorY - 58);
+    final shoulder = Offset(size.width * 0.50, hip.dy - 30);
+    final head = Offset(size.width * 0.50, shoulder.dy - 16);
+
+    canvas.drawLine(head, shoulder, limb);
+    canvas.drawLine(shoulder, hip, limb);
+    canvas.drawLine(hip, knee, limb);
+    canvas.drawLine(knee, feet, limb);
+
+    final elbow = Offset(shoulder.dx + 6, head.dy - 4);
+    final handY = (head.dy + 8) - extend * 28;
+    final hand = Offset(shoulder.dx - 4 + extend * 10, handY);
+
+    canvas.drawLine(shoulder, elbow, limb);
+    canvas.drawLine(elbow, hand, limb);
+
+    canvas.drawCircle(head, 9, joint);
+    canvas.drawCircle(shoulder, 4, joint);
+    canvas.drawCircle(hip, 4, joint);
+    canvas.drawCircle(elbow, 3, joint);
+
+    _drawDumbbell(canvas, hand, angle: math.pi * 0.5);
+  }
+
+  void _drawGluteBridgeWithDumbbell(Canvas canvas, Size size, Paint limb, Paint joint) {
+    _drawGluteBridge(canvas, size, limb, joint);
+    final floorY = size.height * 0.78;
+    final bridgeLift = progress * 30.0;
+    final hip = Offset(size.width * 0.45, floorY - 12 - bridgeLift);
+    _drawDumbbell(canvas, Offset(hip.dx, hip.dy - 8), angle: 0, size: 18);
+  }
+
+  void _drawSquatWithDumbbell(Canvas canvas, Size size, Paint limb, Paint joint) {
+    _drawSquat(canvas, size, limb, joint);
+    final floorY = size.height * 0.78;
+    final squatDepth = progress * 28.0;
+    final hip = Offset(size.width * 0.42 - (progress * 10), floorY - 58 + squatDepth);
+    final shoulder = Offset(size.width * 0.47, hip.dy - 30);
+    final hand = Offset(size.width * 0.65, shoulder.dy + 8);
+    _drawDumbbell(canvas, hand, angle: 0.1, size: 17);
   }
 
   @override

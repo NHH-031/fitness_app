@@ -3,6 +3,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:fitness_tracker/services/storage_service.dart';
 import 'package:fitness_tracker/services/gemini_service.dart';
 import 'package:fitness_tracker/services/locale_service.dart';
+import 'package:fitness_tracker/widgets/exercise_pose_widget.dart';
+import 'package:fitness_tracker/screens/workout_screen.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -249,6 +251,52 @@ void main() {
       );
       expect(withWorkout, 1189); // 839 + 200 + 150
       expect(await StorageService.getTodayWorkoutsCalories(), 150);
+    });
+  });
+
+  group('Exercise Guide Data & Equipment Weight Tests', () {
+    test('ExerciseGuideData correctly classifies bodyweight vs dumbbell exercises', () {
+      // Bodyweight exercises - NO weights allowed
+      expect(ExerciseGuideData.getForExercise('Hít xà đơn').isDumbbell, false);
+      expect(ExerciseGuideData.getForExercise('Pull-ups').isDumbbell, false);
+      expect(ExerciseGuideData.getForExercise('Hít đất').isDumbbell, false);
+      expect(ExerciseGuideData.getForExercise('Hít đất kim cương').isDumbbell, false);
+      expect(ExerciseGuideData.getForExercise('Plank siết cơ bụng').isDumbbell, false);
+      expect(ExerciseGuideData.getForExercise('Nhảy Burpees đốt mỡ').isDumbbell, false);
+      expect(ExerciseGuideData.getForExercise('Leo núi Mountain Climbers').isDumbbell, false);
+      expect(ExerciseGuideData.getForExercise('Chùng chân Lunges').isDumbbell, false);
+      expect(ExerciseGuideData.getForExercise('Gập bụng').isDumbbell, false);
+
+      // Dumbbell exercises - weights allowed
+      expect(ExerciseGuideData.getForExercise('Đẩy ngực tạ đơn').isDumbbell, true);
+      expect(ExerciseGuideData.getForExercise('Dumbbell Floor Press').isDumbbell, true);
+      expect(ExerciseGuideData.getForExercise('Đẩy vai qua đầu').isDumbbell, true);
+      expect(ExerciseGuideData.getForExercise('Dumbbell Shoulder Press').isDumbbell, true);
+      expect(ExerciseGuideData.getForExercise('Kéo tạ lưng xô').isDumbbell, true);
+      expect(ExerciseGuideData.getForExercise('Cuốn tạ tay trước').isDumbbell, true);
+      expect(ExerciseGuideData.getForExercise('Squat ôm tạ Goblet').isDumbbell, true);
+      expect(ExerciseGuideData.getForExercise('Deadlift tạ đơn RDL').isDumbbell, true);
+      expect(ExerciseGuideData.getForExercise('Dang tạ ngang').isDumbbell, true);
+      expect(ExerciseGuideData.getForExercise('Cầu mông đặt tạ').isDumbbell, true);
+    });
+
+    test('WorkoutExercise default weightKg is null for bodyweight', () {
+      const bw = WorkoutExercise(
+        title: 'Hít xà đơn',
+        duration: '3 hiệp x 8 reps',
+        calories: '110 kcal',
+        equipment: 'bodyweight',
+      );
+      expect(bw.weightKg, isNull);
+
+      const db = WorkoutExercise(
+        title: 'Đẩy ngực tạ đơn',
+        duration: '3 hiệp x 10 reps',
+        calories: '115 kcal',
+        equipment: 'dumbbell',
+        weightKg: 10.0,
+      );
+      expect(db.weightKg, 10.0);
     });
   });
 }

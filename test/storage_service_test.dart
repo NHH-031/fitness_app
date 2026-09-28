@@ -9,6 +9,8 @@ void main() {
   group('StorageService - Streak Logic Tests', () {
     setUp(() {
       SharedPreferences.setMockInitialValues({});
+      StorageService.invalidateMemoryCaches();
+      StorageService.disableAntiJitterForTesting = true;
     });
 
     test('First time user starts with streak 1', () async {
