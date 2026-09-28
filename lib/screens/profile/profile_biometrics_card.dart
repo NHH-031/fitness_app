@@ -163,7 +163,7 @@ class ProfileBiometricsCard extends StatelessWidget {
     required Color color,
   }) {
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       decoration: BoxDecoration(
         color: const Color(0xFF14141E),
         borderRadius: BorderRadius.circular(16),
@@ -174,15 +174,19 @@ class ProfileBiometricsCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(icon, color: color, size: 16),
-              const SizedBox(width: 6),
-              Text(
-                label,
-                style: const TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 0.5,
-                  color: AppColors.textSecondary,
+              Icon(icon, color: color, size: 14),
+              const SizedBox(width: 5),
+              Expanded(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 0.3,
+                    color: AppColors.textSecondary,
+                  ),
                 ),
               ),
             ],
@@ -190,6 +194,8 @@ class ProfileBiometricsCard extends StatelessWidget {
           const SizedBox(height: 6),
           Text(
             value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: const TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w900,
@@ -199,8 +205,11 @@ class ProfileBiometricsCard extends StatelessWidget {
           const SizedBox(height: 2),
           Text(
             subtext,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
             style: const TextStyle(
-              fontSize: 10,
+              fontSize: 9.5,
+              height: 1.25,
               color: Colors.white38,
             ),
           ),
