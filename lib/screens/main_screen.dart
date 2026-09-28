@@ -1,7 +1,10 @@
+import 'dart:async';
 import 'dart:ui';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 import '../theme.dart';
+import '../services/auth_service.dart';
 import '../services/locale_service.dart';
 import '../widgets/app_ui_components.dart';
 import 'dashboard_screen.dart';
@@ -13,10 +16,16 @@ class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
 
   static final ValueNotifier<int> tabNotifier = ValueNotifier<int>(0);
+  static final ValueNotifier<int> sessionRefreshNotifier = ValueNotifier<int>(0);
 
   /// Allows any widget anywhere to switch active navigation tabs reliably
   static void switchTab(int index) {
     tabNotifier.value = index;
+  }
+
+  /// Triggers a complete recreation of all 4 tabs (e.g. after login / logout)
+  static void reloadTabs() {
+    sessionRefreshNotifier.value++;
   }
 
   @override
@@ -25,18 +34,34 @@ class MainScreen extends StatefulWidget {
 
 class _MainScreenState extends State<MainScreen> {
   int _currentIndex = 0;
+  Key _tabSessionKey = UniqueKey();
+  StreamSubscription<User?>? _authSubscription;
 
   @override
   void initState() {
     super.initState();
     _currentIndex = MainScreen.tabNotifier.value;
     MainScreen.tabNotifier.addListener(_onTabNotified);
+    MainScreen.sessionRefreshNotifier.addListener(_onSessionRefresh);
+    _authSubscription = AuthService().authStateChanges.listen((_) {
+      _onSessionRefresh();
+    });
   }
 
   @override
   void dispose() {
+    _authSubscription?.cancel();
     MainScreen.tabNotifier.removeListener(_onTabNotified);
+    MainScreen.sessionRefreshNotifier.removeListener(_onSessionRefresh);
     super.dispose();
+  }
+
+  void _onSessionRefresh() {
+    if (mounted) {
+      setState(() {
+        _tabSessionKey = UniqueKey();
+      });
+    }
   }
 
   void _onTabNotified() {
@@ -67,6 +92,7 @@ class _MainScreenState extends State<MainScreen> {
     return Scaffold(
       extendBody: true,
       body: IndexedStack(
+        key: _tabSessionKey,
         index: _currentIndex,
         children: _screens,
       ),

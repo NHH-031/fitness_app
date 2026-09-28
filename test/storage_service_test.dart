@@ -183,6 +183,25 @@ void main() {
       await StorageService.setWaterReminderInterval(3);
       expect(await StorageService.getWaterReminderInterval(), 3);
     });
+
+    test('checkAndResetWaterDaily preserves existing today water when app restarts or syncs', () async {
+      // Giả lập người dùng đã uống 3 ly (750ml) hôm nay
+      await StorageService.addWaterVolume(750);
+      expect(await StorageService.getTodayWaterVolume(), 750);
+      expect(await StorageService.getWaterCupsToday(), 3);
+
+      // Giả lập ứng dụng bị tắt và khởi động lại, xoá water_date nhưng giữ lại dữ liệu lịch sử và cups
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('water_date');
+
+      // Khi app khởi động lại và gọi checkAndResetWaterDaily
+      final reset = await StorageService.checkAndResetWaterDaily();
+      expect(reset, true);
+
+      // Lượng nước và số ly hôm nay phải được BẢO TOÀN, không bị reset về 0
+      expect(await StorageService.getTodayWaterVolume(), 750);
+      expect(await StorageService.getWaterCupsToday(), 3);
+    });
   });
 
   group('StorageService - Daily Summary & History Tests', () {

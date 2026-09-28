@@ -8,6 +8,7 @@ import '../services/locale_service.dart';
 import '../services/storage_service.dart';
 import '../theme.dart';
 import 'login_screen.dart';
+import 'main_screen.dart';
 import 'profile/edit_profile_bottom_sheet.dart';
 import 'profile/profile_achievements_card.dart';
 import 'profile/profile_account_sync_card.dart';
@@ -151,6 +152,7 @@ class _ProfileScreenState extends State<ProfileScreen>
     if (confirmed == true) {
       await AuthService().signOut();
       await StorageService.clearUserDataOnSignOut();
+      MainScreen.reloadTabs();
       if (!mounted) return;
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(builder: (_) => const LoginScreen()),
@@ -167,6 +169,7 @@ class _ProfileScreenState extends State<ProfileScreen>
       if (credential != null && credential.user != null) {
         await StorageService.setGuestMode(false);
         await FirestoreService().syncOnLogin();
+        MainScreen.reloadTabs();
         await _loadProfile();
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(

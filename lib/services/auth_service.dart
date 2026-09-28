@@ -1,6 +1,8 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'storage_service.dart';
+import 'firestore_service.dart';
 
 class AuthService {
   static final AuthService _instance = AuthService._internal();
@@ -51,6 +53,10 @@ class AuthService {
       );
 
       final userCredential = await _auth.signInWithCredential(credential);
+      if (userCredential.user != null) {
+        await StorageService.setGuestMode(false);
+        await FirestoreService().syncOnLogin();
+      }
       return userCredential;
     } on GoogleSignInException catch (e) {
       if (e.code == GoogleSignInExceptionCode.canceled) {

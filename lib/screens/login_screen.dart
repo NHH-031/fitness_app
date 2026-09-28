@@ -28,6 +28,7 @@ class _LoginScreenState extends State<LoginScreen> {
         // Đăng nhập thành công -> Xóa cờ khách và đồng bộ dữ liệu với Firestore
         await StorageService.setGuestMode(false);
         await FirestoreService().syncOnLogin();
+        MainScreen.reloadTabs();
 
         final hasOnboarded = await StorageService.hasCompletedOnboarding();
         if (!mounted) return;

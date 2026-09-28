@@ -745,7 +745,8 @@ class StorageService {
       return false;
     }
 
-    if (savedDate != null && savedDate.isNotEmpty) {
+    // Nếu đã có ngày lưu trước đó và là ngày cũ (khác hôm nay): Chốt sổ lưu trữ cho ngày cũ đó
+    if (savedDate != null && savedDate.isNotEmpty && savedDate != todayStr) {
       final oldCups = prefs.getInt(_keyWaterCupsToday) ?? 0;
       final oldMl = prefs.getInt(_keyWaterVolumeMl) ?? (oldCups * 250);
 
@@ -756,16 +757,54 @@ class StorageService {
       );
     }
 
+    // Cho ngày hôm nay (todayStr):
+    // Đọc lịch sử đã ghi nhận cho ngày hôm nay (nếu có từ trước)
+    final rawLogs = prefs.getStringList(_keyWaterHistory) ?? [];
+    int existingHistoryCups = 0;
+    int existingHistoryMl = 0;
+    for (final str in rawLogs) {
+      try {
+        final map = jsonDecode(str) as Map<String, dynamic>;
+        if (map['date'] == todayStr) {
+          final c = (map['cups'] as num?)?.toInt() ?? 0;
+          final m = (map['volumeMl'] as num?)?.toInt() ?? (c * 250);
+          if (c > existingHistoryCups) existingHistoryCups = c;
+          if (m > existingHistoryMl) existingHistoryMl = m;
+        }
+      } catch (_) {}
+    }
+
+    final currentCupsToday = prefs.getInt(_keyWaterCupsToday) ?? 0;
+    final currentMlToday = prefs.getInt(_keyWaterVolumeMl) ?? 0;
+
+    int resolvedCups = 0;
+    int resolvedMl = 0;
+
+    if (savedDate != null && savedDate != todayStr) {
+      // Ngày mới thật sự (chuyển giao ngày lúc 0h):
+      // Reset về 0 trừ khi hôm nay đã có bản ghi từ trước
+      resolvedCups = existingHistoryCups;
+      resolvedMl = existingHistoryMl > 0 ? existingHistoryMl : (resolvedCups * 250);
+    } else {
+      // savedDate == null (khởi chạy lần đầu hoặc sau đăng nhập/đồng bộ):
+      // Tuyệt đối không xóa dữ liệu đang có của người dùng!
+      resolvedCups = max(currentCupsToday, existingHistoryCups);
+      resolvedMl = max(currentMlToday, resolvedCups * 250);
+    }
+
     await prefs.setString(_keyWaterDate, todayStr);
-    await prefs.setInt(_keyWaterCupsToday, 0);
-    await prefs.setInt(_keyWaterVolumeMl, 0);
+    await prefs.setInt(_keyWaterCupsToday, resolvedCups);
+    await prefs.setInt(_keyWaterVolumeMl, resolvedMl);
 
-    await _archiveWaterLog(
-      dateStr: todayStr,
-      cups: 0,
-      volumeMl: 0,
-    );
+    if (resolvedCups > 0) {
+      await _archiveWaterLog(
+        dateStr: todayStr,
+        cups: resolvedCups,
+        volumeMl: resolvedMl,
+      );
+    }
 
+    notifyWaterChanged();
     notifyDataChanged();
     return true;
   }

@@ -10,24 +10,27 @@ import '../theme.dart';
 class AuthGate extends StatelessWidget {
   const AuthGate({super.key});
 
-  Widget _buildScreenDecider() {
-    return FutureBuilder<bool>(
-      future: StorageService.hasCompletedOnboarding(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Scaffold(
-            backgroundColor: AppTheme.backgroundColor,
-            body: Center(
-              child: CircularProgressIndicator(color: Color(0xFF00F0FF)),
-            ),
-          );
-        }
-        final hasOnboarded = snapshot.data ?? false;
-        if (hasOnboarded) {
-          return const MainScreen();
-        }
-        return const OnboardingProfileScreen();
-      },
+  Widget _buildScreenDecider(String sessionKey) {
+    return KeyedSubtree(
+      key: ValueKey(sessionKey),
+      child: FutureBuilder<bool>(
+        future: StorageService.hasCompletedOnboarding(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Scaffold(
+              backgroundColor: AppTheme.backgroundColor,
+              body: Center(
+                child: CircularProgressIndicator(color: Color(0xFF00F0FF)),
+              ),
+            );
+          }
+          final hasOnboarded = snapshot.data ?? false;
+          if (hasOnboarded) {
+            return const MainScreen();
+          }
+          return const OnboardingProfileScreen();
+        },
+      ),
     );
   }
 
@@ -48,7 +51,7 @@ class AuthGate extends StatelessWidget {
 
         // Đã đăng nhập bằng tài khoản Google
         if (snapshot.hasData && snapshot.data != null) {
-          return _buildScreenDecider();
+          return _buildScreenDecider('user_${snapshot.data!.uid}');
         }
 
         // Chưa đăng nhập -> Kiểm tra xem có đang ở chế độ Khách (Guest) không
@@ -66,7 +69,7 @@ class AuthGate extends StatelessWidget {
 
             final isGuest = guestSnapshot.data ?? false;
             if (isGuest) {
-              return _buildScreenDecider();
+              return _buildScreenDecider('guest_mode');
             }
 
             return const LoginScreen();
