@@ -4,8 +4,11 @@ import 'package:fitness_tracker/widgets/health_score_widget.dart';
 import 'package:fitness_tracker/services/locale_service.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   group('HealthScoreCalculator Algorithm & 4-Pillar Tests', () {
-    setUp(() {
+    setUp(() async {
+      await LocaleService.init();
       LocaleService.languageNotifier.value = 'en';
     });
 
