@@ -114,6 +114,31 @@ class StorageService {
     GeminiService.setApiKey(trimmed);
   }
 
+  /// Xóa sạch toàn bộ dữ liệu người dùng khi đăng xuất (giữ lại cấu hình chung như ngôn ngữ)
+  static Future<void> clearUserDataOnSignOut() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_keyUserProfile);
+    await prefs.remove(_keyLastLoginDate);
+    await prefs.remove(_keyCurrentStreak);
+    await prefs.remove(_keyWaterCupsToday);
+    await prefs.remove(_keyWaterVolumeMl);
+    await prefs.remove(_keyWaterDate);
+    await prefs.remove(_keyWaterHistory);
+    await prefs.remove(_keyIsGuestMode);
+    await prefs.remove(_keyHasCompletedOnboarding);
+    await prefs.remove(_keyTodaySteps);
+    await prefs.remove(_keyDailySummaries);
+    await prefs.remove(_keyDailyStepsHistory);
+    await prefs.remove(_keyUserJoinedDate);
+    await prefs.remove(_keyWorkoutLogs);
+    await prefs.remove(_keyFoodLogs);
+    await prefs.remove(_keyNutritionGoal);
+    await prefs.remove(_keyWeightLogs);
+    await prefs.remove(_keyAiChatHistory);
+    invalidateMemoryCaches();
+    notifyDataChanged();
+  }
+
   // Trạng thái lọc rung và chống quá tải đĩa (Anti-jitter & Debounce)
   static int? _lastHardwareReading;
   static DateTime? _lastReadingTime;
@@ -963,6 +988,10 @@ class StorageService {
     required int durationMinutes,
     required String title,
     int? calories,
+    int? sets,
+    int? reps,
+    double? weightKg,
+    String? equipment,
     DateTime? timestamp,
   }) async {
     final prefs = await SharedPreferences.getInstance();
@@ -973,6 +1002,10 @@ class StorageService {
       'title': title,
       'duration': durationMinutes,
       'calories': calories ?? (durationMinutes * 7),
+      'sets': ?sets,
+      'reps': ?reps,
+      'weight': ?weightKg,
+      'equipment': ?equipment,
       'timestamp': time.toIso8601String(),
     };
     final newEntry = jsonEncode(workoutMap);

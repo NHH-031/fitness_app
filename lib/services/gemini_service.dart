@@ -38,10 +38,9 @@ class FoodInfo {
 }
 
 class GeminiService {
-  static const String _modelName = 'gemini-3.8-flash';
-  static const String _fallbackModelName = 'gemini-flash-lite-latest';
-  static const String defaultApiKey = 'AIzaSyDXtnwTxaJRwvZtNgoEQ8yl0KzvGayb-jY';
-  static String _runtimeApiKey = defaultApiKey;
+  static const String _modelName = 'gemini-2.0-flash';
+  static const String _fallbackModelName = 'gemini-1.5-flash';
+  static String _runtimeApiKey = '';
 
   /// Khóa Gemini API với thứ tự ưu tiên an toàn:
   /// 1. Biến môi trường lúc compile-time: --dart-define=GEMINI_API_KEY=... hoặc --dart-define-from-file=.env

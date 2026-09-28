@@ -338,6 +338,10 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> {
       durationMinutes: durationMinutes,
       title: _currentTitle,
       calories: _currentCalories,
+      sets: _isRepsMode ? _targetSets : null,
+      reps: _isRepsMode ? _targetReps : null,
+      weightKg: _hasWeight ? _weightKg : null,
+      equipment: _equipment,
     );
     AppHaptics.success();
     AchievementService.checkBadges();

@@ -150,7 +150,7 @@ class _ProfileScreenState extends State<ProfileScreen>
 
     if (confirmed == true) {
       await AuthService().signOut();
-      await StorageService.setGuestMode(false);
+      await StorageService.clearUserDataOnSignOut();
       if (!mounted) return;
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(builder: (_) => const LoginScreen()),

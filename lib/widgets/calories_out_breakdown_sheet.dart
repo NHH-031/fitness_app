@@ -579,12 +579,31 @@ class _CaloriesOutBreakdownSheetState extends State<CaloriesOutBreakdownSheet> {
                                                   overflow: TextOverflow.ellipsis,
                                                 ),
                                                 const SizedBox(height: 2),
-                                                Text(
-                                                  '$timeStr • $dur ${LocaleService.isVietnamese ? 'phút' : 'mins'}',
-                                                  style: const TextStyle(
-                                                    color: Colors.white54,
-                                                    fontSize: 11,
-                                                  ),
+                                                Builder(
+                                                  builder: (_) {
+                                                    final sets = w['sets'];
+                                                    final reps = w['reps'];
+                                                    final weight = w['weight'];
+                                                    final detailParts = <String>[
+                                                      timeStr,
+                                                      '$dur ${LocaleService.isVietnamese ? 'phút' : 'mins'}',
+                                                    ];
+                                                    if (sets != null && reps != null) {
+                                                      detailParts.add(LocaleService.isVietnamese
+                                                          ? '$sets hiệp × $reps reps'
+                                                          : '$sets sets × $reps reps');
+                                                    }
+                                                    if (weight != null && (weight as num) > 0) {
+                                                      detailParts.add('${weight}kg');
+                                                    }
+                                                    return Text(
+                                                      detailParts.join(' • '),
+                                                      style: const TextStyle(
+                                                        color: Colors.white54,
+                                                        fontSize: 11,
+                                                      ),
+                                                    );
+                                                  },
                                                 ),
                                               ],
                                             ),

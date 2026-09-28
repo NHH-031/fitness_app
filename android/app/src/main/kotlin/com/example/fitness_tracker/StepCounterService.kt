@@ -39,7 +39,12 @@ class StepCounterService : Service(), SensorEventListener {
         sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
         stepSensor = sensorManager.getDefaultSensor(Sensor.TYPE_STEP_COUNTER)
         stepSensor?.let {
-            sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_UI)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+                // SENSOR_DELAY_NORMAL (200ms) with 10s batching (10_000_000 us) to conserve battery in background
+                sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_NORMAL, 10000000)
+            } else {
+                sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_NORMAL)
+            }
         }
     }
 
