@@ -6,6 +6,7 @@ import '../widgets/macro_donut_chart_widget.dart';
 import '../widgets/meal_category_card_widget.dart';
 import '../widgets/hydration_wave_widget.dart';
 import '../widgets/ai_nutritionist_chat_dialog.dart';
+import '../widgets/app_ui_components.dart';
 import 'ai_chat_history_screen.dart';
 
 class FoodScreen extends StatefulWidget {
@@ -122,7 +123,9 @@ class _FoodScreenState extends State<FoodScreen> {
                   ),
                   const SizedBox(width: 8),
                   // Chat AI History Button
-                  GestureDetector(
+                  BouncingTap(
+                    hapticType: AppHapticFeedbackType.light,
+                    scaleDown: 0.90,
                     onTap: () {
                       Navigator.push(
                         context,
@@ -150,7 +153,9 @@ class _FoodScreenState extends State<FoodScreen> {
                   ),
                   const SizedBox(width: 8),
                   // Chat AI Button
-                  GestureDetector(
+                  BouncingTap(
+                    hapticType: AppHapticFeedbackType.medium,
+                    scaleDown: 0.92,
                     onTap: () => AiNutritionistChatDialog.show(context),
                     child: Container(
                       padding: const EdgeInsets.symmetric(
@@ -262,7 +267,7 @@ class _FoodScreenState extends State<FoodScreen> {
 
               // Hydration Wave & Micronutrients Widget
               const HydrationWaveWidget(),
-              const SizedBox(height: 30),
+              const SizedBox(height: 100),
             ],
           ),
         ),

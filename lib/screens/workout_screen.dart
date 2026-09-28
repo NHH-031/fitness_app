@@ -5,6 +5,7 @@ import '../widgets/exercise_pose_widget.dart';
 import '../widgets/weekly_activity_widget.dart';
 import '../widgets/ai_coach_card_widget.dart';
 import '../widgets/badges_achievement_widget.dart';
+import '../widgets/app_ui_components.dart';
 import '../services/locale_service.dart';
 import '../services/storage_service.dart';
 import 'active_workout_screen.dart';
@@ -218,7 +219,9 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
                   ),
                   child: Row(
                     children: [
-                      GestureDetector(
+                      BouncingTap(
+                        hapticType: AppHapticFeedbackType.selection,
+                        scaleDown: 0.94,
                         onTap: () => setState(() => _isMale = true),
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
@@ -236,7 +239,9 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
                           ),
                         ),
                       ),
-                      GestureDetector(
+                      BouncingTap(
+                        hapticType: AppHapticFeedbackType.selection,
+                        scaleDown: 0.94,
                         onTap: () => setState(() => _isMale = false),
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
@@ -351,51 +356,66 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
                       ],
                     ),
                     const SizedBox(height: 14),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 48,
-                      child: ElevatedButton.icon(
-                        onPressed: () async {
-                          final calMatch = RegExp(r'\d+').firstMatch(ex['calories'] ?? '');
-                          final calories = calMatch != null ? int.parse(calMatch.group(0)!) : 50;
+                    BouncingTap(
+                      hapticType: AppHapticFeedbackType.medium,
+                      scaleDown: 0.96,
+                      onTap: () async {
+                        final calMatch = RegExp(r'\d+').firstMatch(ex['calories'] ?? '');
+                        final calories = calMatch != null ? int.parse(calMatch.group(0)!) : 50;
 
-                          final completed = await Navigator.push<bool>(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => ActiveWorkoutScreen(
-                                title: ex['title']!,
-                                durationSeconds: 45,
-                                estimatedCalories: calories,
+                        final completed = await Navigator.push<bool>(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => ActiveWorkoutScreen(
+                              title: ex['title']!,
+                              durationSeconds: 45,
+                              estimatedCalories: calories,
+                            ),
+                          ),
+                        );
+
+                        _refreshStats();
+
+                        if (completed == true && context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                LocaleService.tr('workout_completed_snack', args: {'title': ex['title']!}),
                               ),
+                              backgroundColor: Colors.green,
                             ),
                           );
-
-                          _refreshStats();
-
-                          if (completed == true && context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  LocaleService.tr('workout_completed_snack', args: {'title': ex['title']!}),
-                                ),
-                                backgroundColor: Colors.green,
-                              ),
-                            );
-                          }
-                        },
-                        icon: const HugeIcon(icon: HugeIcons.strokeRoundedPlay, color: Colors.white, size: 20),
-                        label: Text(
-                          LocaleService.tr('start_workout_btn_action'),
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 1.1,
-                          ),
+                        }
+                      },
+                      child: Container(
+                        width: double.infinity,
+                        height: 48,
+                        decoration: BoxDecoration(
+                          color: AppTheme.primaryColor,
+                          borderRadius: BorderRadius.circular(14),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppTheme.primaryColor.withValues(alpha: 0.35),
+                              blurRadius: 12,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
                         ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppTheme.primaryColor,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                          elevation: 6,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const HugeIcon(icon: HugeIcons.strokeRoundedPlay, color: Colors.white, size: 20),
+                            const SizedBox(width: 8),
+                            Text(
+                              LocaleService.tr('start_workout_btn_action'),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 1.1,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
@@ -404,7 +424,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
               );
             }),
 
-            const SizedBox(height: 20),
+            const SizedBox(height: 100),
           ],
         ),
       ),

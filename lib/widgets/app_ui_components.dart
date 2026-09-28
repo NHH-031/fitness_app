@@ -1,14 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:figma_squircle/figma_squircle.dart';
 import '../theme.dart';
+import '../utils/app_haptics.dart';
+
+enum AppHapticFeedbackType { light, medium, heavy, selection, none }
 
 /// A premium tactile bouncing touch interaction widget.
-/// When pressed, gently scales down and springs back smoothly.
+/// When pressed, gently scales down and springs back smoothly with physical haptic vibration.
 class BouncingTap extends StatefulWidget {
   final Widget child;
   final VoidCallback? onTap;
   final double scaleDown;
   final Duration duration;
+  final AppHapticFeedbackType hapticType;
 
   const BouncingTap({
     super.key,
@@ -16,6 +20,7 @@ class BouncingTap extends StatefulWidget {
     this.onTap,
     this.scaleDown = 0.95,
     this.duration = const Duration(milliseconds: 110),
+    this.hapticType = AppHapticFeedbackType.light,
   });
 
   @override
@@ -25,12 +30,34 @@ class BouncingTap extends StatefulWidget {
 class _BouncingTapState extends State<BouncingTap> {
   bool _isPressed = false;
 
+  void _triggerHaptic() {
+    switch (widget.hapticType) {
+      case AppHapticFeedbackType.light:
+        AppHaptics.light();
+        break;
+      case AppHapticFeedbackType.medium:
+        AppHaptics.medium();
+        break;
+      case AppHapticFeedbackType.heavy:
+        AppHaptics.heavy();
+        break;
+      case AppHapticFeedbackType.selection:
+        AppHaptics.selection();
+        break;
+      case AppHapticFeedbackType.none:
+        break;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTapDown: (_) {
-        if (widget.onTap != null) setState(() => _isPressed = true);
+        if (widget.onTap != null) {
+          setState(() => _isPressed = true);
+          _triggerHaptic();
+        }
       },
       onTapUp: (_) {
         if (widget.onTap != null) setState(() => _isPressed = false);

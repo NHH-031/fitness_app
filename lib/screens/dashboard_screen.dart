@@ -362,6 +362,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 child: Row(
                   children: [
                     BouncingTap(
+                      hapticType: AppHapticFeedbackType.selection,
                       onTap: _canGoPrevious ? _goToPreviousDay : null,
                       child: Padding(
                         padding: const EdgeInsets.all(8.0),
@@ -374,6 +375,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ),
                     Expanded(
                       child: BouncingTap(
+                        hapticType: AppHapticFeedbackType.light,
                         onTap: _pickDate,
                         child: Padding(
                           padding: const EdgeInsets.symmetric(vertical: 8.0),
@@ -418,6 +420,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ),
                     ),
                     BouncingTap(
+                      hapticType: AppHapticFeedbackType.selection,
                       onTap: isViewingToday ? null : _goToNextDay,
                       child: Padding(
                         padding: const EdgeInsets.all(8.0),
@@ -468,7 +471,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         ),
                       ),
                       const SizedBox(width: 6),
-                      GestureDetector(
+                      BouncingTap(
+                        hapticType: AppHapticFeedbackType.medium,
                         onTap: _resetToToday,
                         child: Container(
                           padding: const EdgeInsets.symmetric(
@@ -548,7 +552,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 selectedDate: _selectedDate,
               ),
 
-              const SizedBox(height: 24),
+              const SizedBox(height: 100),
             ],
           ),
         ),
