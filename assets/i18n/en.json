@@ -123,6 +123,8 @@
   "ai_food_logging_sub": "Smart Nutrition Tracking with Gemini",
   "total_calories_in": "TOTAL CALORIES IN",
   "log_food_camera_btn": "SCAN FOOD (CAMERA AI) 📷",
+  "log_food_barcode_btn": "SCAN BARCODE 🏷️",
+  "scan_barcode_option": "Scan product barcode (Open Food Facts)",
   "log_food_voice_short_btn": "VOICE 🎙️",
   "scan_photo_title": "Take or Choose Food Photo",
   "scan_photo_camera": "Take Photo with Camera",
@@ -408,5 +410,15 @@
   "view_chat_history_btn": "AI Chat History",
   "ai_history_badge": "CLOUD SYNCED",
   "chat_you": "You",
-  "chat_gemini": "Gemini Nutritionist"
+  "chat_gemini": "Gemini Nutritionist",
+  "health_connect_title": "HEALTH & DEVICE SYNC",
+  "health_connect_sub": "Sync heart rate, sleep & steps from Smartwatch",
+  "health_connect_sync_now": "SYNC NOW",
+  "health_connect_status_connected": "CONNECTED",
+  "health_connect_status_not_connected": "DISCONNECTED",
+  "health_connect_last_sync": "Last sync: {time}",
+  "health_stat_heart_rate": "Heart Rate",
+  "health_stat_sleep": "Sleep",
+  "health_stat_steps": "Steps",
+  "health_stat_active_cal": "Active Burn"
 }

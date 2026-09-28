@@ -16,6 +16,7 @@ import 'profile/profile_ai_interconnection_card.dart';
 import 'profile/profile_battery_card.dart';
 import 'profile/profile_biometrics_card.dart';
 import 'profile/profile_goal_selector_card.dart';
+import 'profile/profile_health_connect_card.dart';
 import 'profile/profile_hero_card.dart';
 import 'profile/profile_language_card.dart';
 import 'profile/profile_macro_blueprint_card.dart';
@@ -424,7 +425,12 @@ class _ProfileScreenState extends State<ProfileScreen>
 
               const SizedBox(height: 18),
 
-              // 5. Background Running & Battery Optimization Card
+              // 5. Smartwatch & Health Connect Integration Card
+              const ProfileHealthConnectCard(),
+
+              const SizedBox(height: 18),
+
+              // 6. Background Running & Battery Optimization Card
               ProfileBatteryCard(
                 isBatteryExempt: _isBatteryExempt,
                 onRequestBatteryOptimization: _requestBatteryOptimization,

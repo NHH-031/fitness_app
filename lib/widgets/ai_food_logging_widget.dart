@@ -9,6 +9,7 @@ import '../services/locale_service.dart';
 import '../utils/app_haptics.dart';
 import '../services/achievement_service.dart';
 import 'app_ui_components.dart';
+import 'barcode_scanner_sheet.dart';
 
 class AiFoodLoggingWidget extends StatefulWidget {
   final VoidCallback? onFoodUpdated;
@@ -301,6 +302,35 @@ class _AiFoodLoggingWidgetState extends State<AiFoodLoggingWidget>
                 onTap: () {
                   Navigator.pop(ctx);
                   _pickAndAnalyzeImage(ImageSource.gallery);
+                },
+              ),
+              const SizedBox(height: 8),
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFF9E00).withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.qr_code_scanner_rounded, color: Color(0xFFFF9E00)),
+                ),
+                title: Text(
+                  LocaleService.tr('scan_barcode_option'),
+                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                ),
+                subtitle: const Text(
+                  'Open Food Facts database',
+                  style: TextStyle(color: Colors.white38, fontSize: 11),
+                ),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  BarcodeScannerSheet.show(
+                    context,
+                    onFoodLogged: (food, mealType) async {
+                      await _loadFoodData();
+                      widget.onFoodUpdated?.call();
+                    },
+                  );
                 },
               ),
               const SizedBox(height: 10),
@@ -760,42 +790,102 @@ class _AiFoodLoggingWidgetState extends State<AiFoodLoggingWidget>
 
           // Main Action Buttons
           if (!_isLogging) ...[
-            GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: _showImageSourceDialog,
-              child: Container(
-                width: double.infinity,
-                height: 50,
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF00F0FF), Color(0xFF0072FF)],
-                  ),
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFF00F0FF).withValues(alpha: 0.35),
-                      blurRadius: 12,
-                      offset: const Offset(0, 3),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.camera_alt_rounded, color: Colors.black, size: 20),
-                    const SizedBox(width: 8),
-                    Text(
-                      LocaleService.tr('log_food_camera_btn'),
-                      style: const TextStyle(
-                        color: Colors.black,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 0.6,
-                        fontSize: 12.5,
+            Row(
+              children: [
+                Expanded(
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: _showImageSourceDialog,
+                    child: Container(
+                      height: 48,
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF00F0FF), Color(0xFF0072FF)],
+                        ),
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF00F0FF).withValues(alpha: 0.35),
+                            blurRadius: 10,
+                            offset: const Offset(0, 3),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.camera_alt_rounded, color: Colors.black, size: 18),
+                          const SizedBox(width: 6),
+                          Flexible(
+                            child: Text(
+                              LocaleService.tr('log_food_camera_btn'),
+                              style: const TextStyle(
+                                color: Colors.black,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: 0.5,
+                                fontSize: 11.5,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                  ],
+                  ),
                 ),
-              ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () {
+                      BarcodeScannerSheet.show(
+                        context,
+                        onFoodLogged: (food, mealType) async {
+                          await _loadFoodData();
+                          widget.onFoodUpdated?.call();
+                        },
+                      );
+                    },
+                    child: Container(
+                      height: 48,
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFFFF9E00), Color(0xFFFF5500)],
+                        ),
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFFFF9E00).withValues(alpha: 0.35),
+                            blurRadius: 10,
+                            offset: const Offset(0, 3),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.qr_code_scanner_rounded, color: Colors.white, size: 19),
+                          const SizedBox(width: 6),
+                          Flexible(
+                            child: Text(
+                              LocaleService.tr('log_food_barcode_btn'),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: 0.5,
+                                fontSize: 11.5,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 10),
             Row(
