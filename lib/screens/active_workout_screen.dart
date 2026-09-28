@@ -845,56 +845,64 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> {
                       // Active Reps & Sets Controller
                       Column(
                         children: [
-                          // Sets segmented pills
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: List.generate(_targetSets, (index) {
-                              final setNum = index + 1;
-                              final isDone = setNum < _currentSet;
-                              final isCurrent = setNum == _currentSet;
-                              return AnimatedContainer(
-                                duration: const Duration(milliseconds: 250),
-                                margin: const EdgeInsets.symmetric(horizontal: 4),
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                decoration: BoxDecoration(
-                                  color: isDone
-                                      ? const Color(0xFF30D158).withValues(alpha: 0.2)
-                                      : isCurrent
-                                          ? AppTheme.primaryColor.withValues(alpha: 0.25)
-                                          : Colors.white.withValues(alpha: 0.05),
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(
-                                    color: isDone
-                                        ? const Color(0xFF30D158)
-                                        : isCurrent
-                                            ? AppTheme.primaryColor
-                                            : Colors.white12,
-                                    width: isCurrent ? 1.5 : 1,
-                                  ),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    if (isDone) ...[
-                                      const Icon(Icons.check, size: 12, color: Color(0xFF30D158)),
-                                      const SizedBox(width: 4),
-                                    ],
-                                    Text(
-                                      'Set $setNum',
-                                      style: TextStyle(
+                          // Sets segmented pills (Horizontally scrollable to prevent overflow on any number of sets)
+                          Center(
+                            child: SingleChildScrollView(
+                              scrollDirection: Axis.horizontal,
+                              physics: const BouncingScrollPhysics(),
+                              padding: const EdgeInsets.symmetric(horizontal: 4),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: List.generate(_targetSets, (index) {
+                                  final setNum = index + 1;
+                                  final isDone = setNum < _currentSet;
+                                  final isCurrent = setNum == _currentSet;
+                                  return AnimatedContainer(
+                                    duration: const Duration(milliseconds: 250),
+                                    margin: const EdgeInsets.symmetric(horizontal: 4),
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                    decoration: BoxDecoration(
+                                      color: isDone
+                                          ? const Color(0xFF30D158).withValues(alpha: 0.2)
+                                          : isCurrent
+                                              ? AppTheme.primaryColor.withValues(alpha: 0.25)
+                                              : Colors.white.withValues(alpha: 0.05),
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(
                                         color: isDone
                                             ? const Color(0xFF30D158)
                                             : isCurrent
-                                                ? Colors.white
-                                                : Colors.grey,
-                                        fontSize: 11,
-                                        fontWeight: isCurrent ? FontWeight.bold : FontWeight.w600,
+                                                ? AppTheme.primaryColor
+                                                : Colors.white12,
+                                        width: isCurrent ? 1.5 : 1,
                                       ),
                                     ),
-                                  ],
-                                ),
-                              );
-                            }),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        if (isDone) ...[
+                                          const Icon(Icons.check, size: 12, color: Color(0xFF30D158)),
+                                          const SizedBox(width: 4),
+                                        ],
+                                        Text(
+                                          'Set $setNum',
+                                          style: TextStyle(
+                                            color: isDone
+                                                ? const Color(0xFF30D158)
+                                                : isCurrent
+                                                    ? Colors.white
+                                                    : Colors.grey,
+                                            fontSize: 11,
+                                            fontWeight: isCurrent ? FontWeight.bold : FontWeight.w600,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                }),
+                              ),
+                            ),
                           ),
                           const SizedBox(height: 16),
                           // Interactive Reps Counter Circle with Touch to Count
@@ -970,8 +978,11 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> {
                           ),
                           const SizedBox(height: 14),
                           // Reps & Weight Adjuster Row
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
+                          Wrap(
+                            alignment: WrapAlignment.center,
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            spacing: 12,
+                            runSpacing: 8,
                             children: [
                               // Rep adjust
                               Container(
@@ -982,6 +993,7 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> {
                                   border: Border.all(color: Colors.white10),
                                 ),
                                 child: Row(
+                                  mainAxisSize: MainAxisSize.min,
                                   children: [
                                     IconButton(
                                       visualDensity: VisualDensity.compact,
@@ -1000,8 +1012,7 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> {
                                   ],
                                 ),
                               ),
-                              if (_hasWeight) ...[
-                                const SizedBox(width: 12),
+                              if (_hasWeight)
                                 // Weight adjust
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -1011,6 +1022,7 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> {
                                     border: Border.all(color: Colors.white10),
                                   ),
                                   child: Row(
+                                    mainAxisSize: MainAxisSize.min,
                                     children: [
                                       IconButton(
                                         visualDensity: VisualDensity.compact,
@@ -1028,9 +1040,8 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> {
                                       ),
                                     ],
                                   ),
-                                ),
-                              ] else ...[
-                                const SizedBox(width: 12),
+                                )
+                              else
                                 // Bodyweight indicator badge
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
@@ -1058,8 +1069,7 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> {
                                   ),
                                 ),
                               ],
-                            ],
-                          ),
+                            ),
                           const SizedBox(height: 18),
                           // Complete Set Button
                           SizedBox(

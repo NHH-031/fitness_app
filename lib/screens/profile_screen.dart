@@ -186,12 +186,19 @@ class _ProfileScreenState extends State<ProfileScreen>
       }
     } catch (e) {
       if (!mounted) return;
+      final isVi = LocaleService.isVietnamese;
+      String errorMsg = isVi
+          ? 'Đăng nhập không thành công. Vui lòng thử lại.'
+          : 'Sign in failed. Please try again.';
+      if (e.toString().contains('network') || e.toString().contains('Connectivity') || e.toString().contains('IOException') || e.toString().contains('null-id-token')) {
+        errorMsg = isVi
+            ? 'Lỗi kết nối mạng khi xác thực Google. Vui lòng kiểm tra Wifi/4G.'
+            : 'Network error during Google sign in. Please check your connection.';
+      }
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            LocaleService.isVietnamese
-                ? 'Đăng nhập không thành công. Vui lòng thử lại.'
-                : 'Sign in failed. Please try again.',
+            errorMsg,
             style: const TextStyle(color: Colors.white),
           ),
           backgroundColor: Colors.redAccent.shade700,

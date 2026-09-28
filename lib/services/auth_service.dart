@@ -38,6 +38,14 @@ class AuthService {
 
       final GoogleSignInAuthentication googleAuth = googleAccount.authentication;
 
+      if (googleAuth.idToken == null || googleAuth.idToken!.isEmpty) {
+        debugPrint('AuthService: idToken is null or empty from GoogleSignInAuthentication');
+        throw FirebaseAuthException(
+          code: 'null-id-token',
+          message: 'Không nhận được mã xác thực (ID token) từ Google. Vui lòng kiểm tra kết nối mạng và thử lại.',
+        );
+      }
+
       final OAuthCredential credential = GoogleAuthProvider.credential(
         idToken: googleAuth.idToken,
       );

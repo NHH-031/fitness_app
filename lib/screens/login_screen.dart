@@ -42,12 +42,18 @@ class _LoginScreenState extends State<LoginScreen> {
     } catch (e) {
       if (!mounted) return;
       final isVi = LocaleService.isVietnamese;
+      String errorMsg = isVi
+          ? 'Đăng nhập Google không thành công. Vui lòng thử lại.'
+          : 'Google Sign-In failed. Please try again.';
+      if (e.toString().contains('network') || e.toString().contains('Connectivity') || e.toString().contains('IOException')) {
+        errorMsg = isVi
+            ? 'Lỗi kết nối mạng khi xác thực Google. Vui lòng kiểm tra Wifi/4G.'
+            : 'Network error during Google sign in. Please check your connection.';
+      }
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            isVi
-                ? 'Đăng nhập Google không thành công. Vui lòng thử lại.'
-                : 'Google Sign-In failed. Please try again.',
+            errorMsg,
             style: AppTheme.font(color: Colors.white, fontSize: 14),
           ),
           backgroundColor: Colors.redAccent.shade700,
