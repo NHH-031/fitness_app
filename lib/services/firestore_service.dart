@@ -307,10 +307,11 @@ class FirestoreService {
     }
   }
 
-  /// Đẩy dữ liệu hiện có ở SharedPreferences lên Firestore
+  /// Đẩy dữ liệu hiện có ở SharedPreferences lên Firestore bằng WriteBatch tối ưu
   Future<void> _pushLocalDataToCloud() async {
     final doc = _userDoc;
-    if (doc == null) return;
+    final fs = _firestore;
+    if (doc == null || fs == null) return;
 
     final user = FirebaseAuth.instance.currentUser;
     // 1. Tạo user metadata
@@ -331,10 +332,27 @@ class FirestoreService {
     final lastLogin = prefs.getString('last_login_date') ?? DateTime.now().toIso8601String();
     await updateStreak(streak, lastLogin);
 
+    // Chuẩn bị batch writer (tối đa 400 thao tác / batch)
+    WriteBatch batch = fs.batch();
+    int opCount = 0;
+
+    Future<void> commitBatchIfNeeded() async {
+      if (opCount >= 400) {
+        await batch.commit();
+        batch = fs.batch();
+        opCount = 0;
+      }
+    }
+
     // 4. Workout logs
     final localWorkouts = await StorageService.getWorkoutLogs();
     for (final w in localWorkouts) {
-      await saveWorkoutLog(w);
+      final id = w['timestamp']?.toString().replaceAll(RegExp(r'[^0-9]'), '') ??
+          DateTime.now().millisecondsSinceEpoch.toString();
+      final workoutDoc = doc.collection('workout_logs').doc(id);
+      batch.set(workoutDoc, w, SetOptions(merge: true));
+      opCount++;
+      await commitBatchIfNeeded();
     }
 
     // 5. Food logs
@@ -343,23 +361,41 @@ class FirestoreService {
       try {
         final map = jsonDecode(str) as Map<String, dynamic>;
         final entry = FoodLogEntry.fromJson(map);
-        await saveFoodLog(entry);
+        final foodDoc = doc.collection('food_logs').doc(entry.id);
+        batch.set(foodDoc, entry.toJson(), SetOptions(merge: true));
+        opCount++;
+        await commitBatchIfNeeded();
       } catch (_) {}
     }
 
     // 6. Water logs
     final waterLogs = await StorageService.getWaterHistoryLogs();
     for (final log in waterLogs) {
-      await saveWaterData(log.date, log.volumeMl, log.cups);
+      final waterDoc = doc.collection('water_logs').doc(log.date);
+      batch.set(waterDoc, {
+        'date': log.date,
+        'volumeMl': log.volumeMl,
+        'cups': log.cups,
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+      opCount++;
+      await commitBatchIfNeeded();
     }
 
     // 7. AI Chat History
     final localChats = await StorageService.getLocalChatHistory();
     for (final chat in localChats) {
-      await saveChatMessage(chat);
+      final chatDoc = doc.collection('chat_messages').doc(chat.id);
+      batch.set(chatDoc, chat.toJson(), SetOptions(merge: true));
+      opCount++;
+      await commitBatchIfNeeded();
     }
 
-    debugPrint('Đã đồng bộ toàn bộ dữ liệu local lên Cloud Firestore thành công.');
+    if (opCount > 0) {
+      await batch.commit();
+    }
+
+    debugPrint('Đã đồng bộ toàn bộ dữ liệu local lên Cloud Firestore qua WriteBatch thành công ($opCount bản ghi).');
   }
 
   /// Tải dữ liệu từ Firestore xuống SharedPreferences (Local Cache)

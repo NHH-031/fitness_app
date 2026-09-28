@@ -37,4 +37,22 @@ class AppHaptics {
       await HapticFeedback.selectionClick();
     } catch (_) {}
   }
+
+  /// Đếm ngược 3, 2, 1 (kèm âm thanh click hệ thống và rung)
+  static Future<void> countdownTick() async {
+    try {
+      await SystemSound.play(SystemSoundType.click);
+      await HapticFeedback.mediumImpact();
+    } catch (_) {}
+  }
+
+  /// Thông báo hết giờ / chuyển hiệp mới (âm thanh alert hệ thống + rung mạnh)
+  static Future<void> timerFinished() async {
+    try {
+      await SystemSound.play(SystemSoundType.alert);
+      await HapticFeedback.heavyImpact();
+      await Future.delayed(const Duration(milliseconds: 150));
+      await HapticFeedback.heavyImpact();
+    } catch (_) {}
+  }
 }

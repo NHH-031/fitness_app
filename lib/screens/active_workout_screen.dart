@@ -238,11 +238,11 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> {
           _restRemainingSeconds--;
         });
         if (_restRemainingSeconds <= 3 && _restRemainingSeconds > 0) {
-          AppHaptics.light();
+          AppHaptics.countdownTick();
         }
       } else {
         _restTimer?.cancel();
-        AppHaptics.success();
+        AppHaptics.timerFinished();
         _skipRest();
       }
     });
@@ -288,11 +288,11 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> {
           _remainingSeconds--;
         });
         if (_remainingSeconds <= 3 && _remainingSeconds > 0) {
-          AppHaptics.light();
+          AppHaptics.countdownTick();
         }
       } else {
         _timer?.cancel();
-        AppHaptics.heavy();
+        AppHaptics.timerFinished();
         _finishWorkout();
       }
     });

@@ -123,39 +123,45 @@ class _AiNutritionistChatDialogState extends State<AiNutritionistChatDialog> {
     _messageController.clear();
     setState(() {
       _messages.add({'role': 'user', 'text': query});
+      _messages.add({'role': 'model', 'text': ''});
       _isSending = true;
     });
 
     _scrollToBottom();
 
+    final modelIndex = _messages.length - 1;
+    String accumulatedText = '';
+
     try {
-      final response = await GeminiService.chatWithNutritionist(
+      final historyForAi = _messages.sublist(0, modelIndex);
+      await for (final chunk in GeminiService.chatWithNutritionistStream(
         message: query,
         todayStats: _todayStats,
-        history: _messages,
+        history: historyForAi,
         userProfile: _userProfile,
-      );
+      )) {
+        accumulatedText += chunk;
+        if (mounted) {
+          setState(() {
+            _messages[modelIndex]['text'] = accumulatedText;
+          });
+          _scrollToBottom();
+        }
+      }
 
-      final modelMsg = ChatMessage(
-        id: '${DateTime.now().millisecondsSinceEpoch}_m',
-        role: 'model',
-        text: response,
-        timestamp: DateTime.now(),
-      );
-      unawaited(StorageService.saveChatMessage(modelMsg));
-
-      if (mounted) {
-        setState(() {
-          _messages.add({'role': 'model', 'text': response});
-        });
+      if (accumulatedText.isNotEmpty) {
+        final modelMsg = ChatMessage(
+          id: '${DateTime.now().millisecondsSinceEpoch}_m',
+          role: 'model',
+          text: accumulatedText,
+          timestamp: DateTime.now(),
+        );
+        unawaited(StorageService.saveChatMessage(modelMsg));
       }
     } catch (e) {
       if (mounted) {
         setState(() {
-          _messages.add({
-            'role': 'model',
-            'text': 'Lỗi kết nối với AI: $e. Vui lòng thử lại!',
-          });
+          _messages[modelIndex]['text'] = 'Lỗi kết nối với AI: $e. Vui lòng thử lại!';
         });
       }
     } finally {
@@ -350,7 +356,7 @@ class _AiNutritionistChatDialogState extends State<AiNutritionistChatDialog> {
           ),
 
           // Loading Thinking Indicator
-          if (_isSending)
+          if (_isSending && (_messages.isEmpty || (_messages.last['text']?.isEmpty ?? true)))
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
               child: Row(

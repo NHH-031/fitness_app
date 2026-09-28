@@ -177,6 +177,231 @@ class _CaloriesOutBreakdownSheetState extends State<CaloriesOutBreakdownSheet> {
     }
   }
 
+  void _showWorkoutDetailSheet(Map<String, dynamic> workout) {
+    final title = workout['title']?.toString() ?? (LocaleService.isVietnamese ? 'Bài tập' : 'Workout');
+    final duration = workout['duration']?.toString() ?? '0';
+    final calories = workout['calories']?.toString() ?? '0';
+    final sets = workout['sets'] as int?;
+    final reps = workout['reps'] as int?;
+    final weight = (workout['weight'] as num?)?.toDouble();
+    final equipment = workout['equipment']?.toString();
+    final timeStr = _formatTime(workout['timestamp']?.toString());
+
+    // Calculate total volume or total reps
+    String? volumeText;
+    if (sets != null && reps != null) {
+      if (weight != null && weight > 0) {
+        final totalKg = sets * reps * weight;
+        volumeText = '${totalKg.toStringAsFixed(totalKg % 1 == 0 ? 0 : 1)} kg';
+      } else {
+        volumeText = '${sets * reps} reps';
+      }
+    }
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF161622),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.white24,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(Icons.fitness_center_rounded, color: Colors.orange, size: 24),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          '${LocaleService.isVietnamese ? 'Hoàn thành lúc' : 'Completed at'} $timeStr',
+                          style: const TextStyle(color: Colors.white54, fontSize: 12),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    icon: const Icon(Icons.close_rounded, color: Colors.white54),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              // Metric Grid
+              Wrap(
+                spacing: 12,
+                runSpacing: 12,
+                children: [
+                  _buildDetailMetric(
+                    icon: Icons.timer_outlined,
+                    color: Colors.amber,
+                    title: LocaleService.isVietnamese ? 'Thời gian' : 'Duration',
+                    value: '$duration ${LocaleService.isVietnamese ? 'phút' : 'mins'}',
+                  ),
+                  _buildDetailMetric(
+                    icon: Icons.local_fire_department_rounded,
+                    color: Colors.deepOrangeAccent,
+                    title: LocaleService.isVietnamese ? 'Calo tiêu hao' : 'Calories',
+                    value: '+$calories kcal',
+                  ),
+                  if (sets != null)
+                    _buildDetailMetric(
+                      icon: Icons.repeat_rounded,
+                      color: Colors.tealAccent,
+                      title: LocaleService.isVietnamese ? 'Số hiệp' : 'Sets',
+                      value: '$sets ${LocaleService.isVietnamese ? 'hiệp' : 'sets'}',
+                    ),
+                  if (reps != null)
+                    _buildDetailMetric(
+                      icon: Icons.refresh_rounded,
+                      color: Colors.lightBlueAccent,
+                      title: LocaleService.isVietnamese ? 'Số lần/hiệp' : 'Reps/set',
+                      value: '$reps reps',
+                    ),
+                  if (weight != null && weight > 0)
+                    _buildDetailMetric(
+                      icon: Icons.fitness_center_rounded,
+                      color: Colors.purpleAccent,
+                      title: LocaleService.isVietnamese ? 'Mức tạ' : 'Weight',
+                      value: '${weight.toStringAsFixed(weight % 1 == 0 ? 0 : 1)} kg',
+                    ),
+                  if (volumeText != null)
+                    _buildDetailMetric(
+                      icon: Icons.stacked_line_chart_rounded,
+                      color: Colors.greenAccent,
+                      title: weight != null && weight > 0
+                          ? (LocaleService.isVietnamese ? 'Tổng khối lượng' : 'Total Volume')
+                          : (LocaleService.isVietnamese ? 'Tổng số lần' : 'Total Reps'),
+                      value: volumeText,
+                    ),
+                  if (equipment != null && equipment.isNotEmpty)
+                    _buildDetailMetric(
+                      icon: Icons.handyman_outlined,
+                      color: Colors.blueGrey,
+                      title: LocaleService.isVietnamese ? 'Thiết bị' : 'Equipment',
+                      value: equipment,
+                    ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        Navigator.pop(ctx);
+                        _confirmDeleteWorkout(workout);
+                      },
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.redAccent,
+                        side: const BorderSide(color: Colors.redAccent),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                      icon: const Icon(Icons.delete_outline_rounded, size: 18),
+                      label: Text(LocaleService.isVietnamese ? 'Xóa bài tập' : 'Delete log'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDetailMetric({
+    required IconData icon,
+    required Color color,
+    required String title,
+    required String value,
+  }) {
+    return Container(
+      width: 155,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1E1E2C),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.white10),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, color: color, size: 20),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(color: Colors.white54, fontSize: 11),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  value,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _navigateToWorkoutTab() {
     Navigator.of(context).pop();
     MainScreen.switchTab(1); // Tab 1 is WorkoutScreen
@@ -539,94 +764,101 @@ class _CaloriesOutBreakdownSheetState extends State<CaloriesOutBreakdownSheet> {
                                     final cal = w['calories']?.toString() ?? '70';
                                     final timeStr = _formatTime(w['timestamp']?.toString());
 
-                                    return Container(
-                                      padding: const EdgeInsets.all(12),
-                                      decoration: BoxDecoration(
-                                        color: Colors.black.withValues(alpha: 0.25),
+                                    return Material(
+                                      color: Colors.transparent,
+                                      child: InkWell(
+                                        onTap: () => _showWorkoutDetailSheet(w),
                                         borderRadius: BorderRadius.circular(12),
-                                        border: Border.all(
-                                          color: Colors.white.withValues(alpha: 0.05),
-                                        ),
-                                      ),
-                                      child: Row(
-                                        children: [
-                                          Container(
-                                            width: 36,
-                                            height: 36,
-                                            decoration: BoxDecoration(
-                                              color: Colors.orange.withValues(alpha: 0.12),
-                                              borderRadius: BorderRadius.circular(10),
-                                            ),
-                                            child: const Icon(
-                                              Icons.sports_gymnastics_rounded,
-                                              color: Colors.orange,
-                                              size: 18,
+                                        child: Container(
+                                          padding: const EdgeInsets.all(12),
+                                          decoration: BoxDecoration(
+                                            color: Colors.black.withValues(alpha: 0.25),
+                                            borderRadius: BorderRadius.circular(12),
+                                            border: Border.all(
+                                              color: Colors.white.withValues(alpha: 0.05),
                                             ),
                                           ),
-                                          const SizedBox(width: 10),
-                                          Expanded(
-                                            child: Column(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
-                                              children: [
-                                                Text(
-                                                  title,
-                                                  style: const TextStyle(
-                                                    color: Colors.white,
-                                                    fontSize: 13,
-                                                    fontWeight: FontWeight.bold,
-                                                  ),
-                                                  maxLines: 1,
-                                                  overflow: TextOverflow.ellipsis,
+                                          child: Row(
+                                            children: [
+                                              Container(
+                                                width: 36,
+                                                height: 36,
+                                                decoration: BoxDecoration(
+                                                  color: Colors.orange.withValues(alpha: 0.12),
+                                                  borderRadius: BorderRadius.circular(10),
                                                 ),
-                                                const SizedBox(height: 2),
-                                                Builder(
-                                                  builder: (_) {
-                                                    final sets = w['sets'];
-                                                    final reps = w['reps'];
-                                                    final weight = w['weight'];
-                                                    final detailParts = <String>[
-                                                      timeStr,
-                                                      '$dur ${LocaleService.isVietnamese ? 'phút' : 'mins'}',
-                                                    ];
-                                                    if (sets != null && reps != null) {
-                                                      detailParts.add(LocaleService.isVietnamese
-                                                          ? '$sets hiệp × $reps reps'
-                                                          : '$sets sets × $reps reps');
-                                                    }
-                                                    if (weight != null && (weight as num) > 0) {
-                                                      detailParts.add('${weight}kg');
-                                                    }
-                                                    return Text(
-                                                      detailParts.join(' • '),
+                                                child: const Icon(
+                                                  Icons.sports_gymnastics_rounded,
+                                                  color: Colors.orange,
+                                                  size: 18,
+                                                ),
+                                              ),
+                                              const SizedBox(width: 10),
+                                              Expanded(
+                                                child: Column(
+                                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                                  children: [
+                                                    Text(
+                                                      title,
                                                       style: const TextStyle(
-                                                        color: Colors.white54,
-                                                        fontSize: 11,
+                                                        color: Colors.white,
+                                                        fontSize: 13,
+                                                        fontWeight: FontWeight.bold,
                                                       ),
-                                                    );
-                                                  },
+                                                      maxLines: 1,
+                                                      overflow: TextOverflow.ellipsis,
+                                                    ),
+                                                    const SizedBox(height: 2),
+                                                    Builder(
+                                                      builder: (_) {
+                                                        final sets = w['sets'];
+                                                        final reps = w['reps'];
+                                                        final weight = w['weight'];
+                                                        final detailParts = <String>[
+                                                          timeStr,
+                                                          '$dur ${LocaleService.isVietnamese ? 'phút' : 'mins'}',
+                                                        ];
+                                                        if (sets != null && reps != null) {
+                                                          detailParts.add(LocaleService.isVietnamese
+                                                              ? '$sets hiệp × $reps reps'
+                                                              : '$sets sets × $reps reps');
+                                                        }
+                                                        if (weight != null && (weight as num) > 0) {
+                                                          detailParts.add('${weight}kg');
+                                                        }
+                                                        return Text(
+                                                          detailParts.join(' • '),
+                                                          style: const TextStyle(
+                                                            color: Colors.white54,
+                                                            fontSize: 11,
+                                                          ),
+                                                        );
+                                                      },
+                                                    ),
+                                                  ],
                                                 ),
-                                              ],
-                                            ),
+                                              ),
+                                              Text(
+                                                '+$cal kcal',
+                                                style: const TextStyle(
+                                                  fontSize: 14,
+                                                  fontWeight: FontWeight.w900,
+                                                  color: Colors.orange,
+                                                ),
+                                              ),
+                                              IconButton(
+                                                onPressed: () => _confirmDeleteWorkout(w),
+                                                icon: const Icon(
+                                                  Icons.delete_outline_rounded,
+                                                  color: Colors.white38,
+                                                  size: 18,
+                                                ),
+                                                visualDensity: VisualDensity.compact,
+                                                padding: const EdgeInsets.only(left: 4),
+                                              ),
+                                            ],
                                           ),
-                                          Text(
-                                            '+$cal kcal',
-                                            style: const TextStyle(
-                                              fontSize: 14,
-                                              fontWeight: FontWeight.w900,
-                                              color: Colors.orange,
-                                            ),
-                                          ),
-                                          IconButton(
-                                            onPressed: () => _confirmDeleteWorkout(w),
-                                            icon: const Icon(
-                                              Icons.delete_outline_rounded,
-                                              color: Colors.white38,
-                                              size: 18,
-                                            ),
-                                            visualDensity: VisualDensity.compact,
-                                            padding: const EdgeInsets.only(left: 4),
-                                          ),
-                                        ],
+                                        ),
                                       ),
                                     );
                                   },

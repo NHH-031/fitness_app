@@ -93,6 +93,42 @@ class GeminiService {
     }
   }
 
+  /// Gọi API Streaming với cơ chế tự động chuyển sang model dự phòng nếu gặp sự cố
+  static Stream<String> _generateStreamWithFallback(
+    List<Content> contents, {
+    Content? systemInstruction,
+  }) async* {
+    try {
+      final responseStream = _createModel(
+        modelName: _modelName,
+        systemInstruction: systemInstruction,
+      ).generateContentStream(contents);
+      await for (final chunk in responseStream) {
+        if (chunk.text != null && chunk.text!.isNotEmpty) {
+          yield chunk.text!;
+        }
+      }
+    } catch (primaryErr) {
+      debugPrint(
+        "⚠️ [GeminiService Stream] Model chính ($_modelName) lỗi: $primaryErr. Chuyển đổi sang dự phòng ($_fallbackModelName)...",
+      );
+      try {
+        final fallbackStream = _createModel(
+          modelName: _fallbackModelName,
+          systemInstruction: systemInstruction,
+        ).generateContentStream(contents);
+        await for (final chunk in fallbackStream) {
+          if (chunk.text != null && chunk.text!.isNotEmpty) {
+            yield chunk.text!;
+          }
+        }
+      } catch (fallbackErr) {
+        debugPrint("Gemini Stream Error: $fallbackErr");
+        yield "Lỗi kết nối với AI ($fallbackErr). Vui lòng thử lại sau!";
+      }
+    }
+  }
+
   /// Trích xuất và phân tích JSON từ chuỗi phản hồi thô của Gemini
   static FoodInfo? parseFoodJson(String rawText) {
     try {
@@ -558,6 +594,77 @@ Phong cách trả lời:
       debugPrint("Nutritionist Chat Error: $e");
       return "Rất tiếc, đã có lỗi kết nối với Gemini AI ($e). Vui lòng thử lại sau!";
     }
+  }
+
+  /// AI Nutritionist Advisor: Interactive streaming chat with Gemini
+  static Stream<String> chatWithNutritionistStream({
+    required String message,
+    required Map<String, dynamic> todayStats,
+    List<Map<String, String>>? history,
+    UserProfile? userProfile,
+  }) async* {
+    if (!hasValidApiKey) {
+      yield "Chưa cấu hình Gemini API Key. Vui lòng vào Cài đặt Hồ sơ để nhập API Key.";
+      return;
+    }
+
+    final caloriesIn = todayStats['caloriesIn'] ?? 0;
+    final caloriesBurned = todayStats['caloriesBurned'] ?? 0;
+    final protein = todayStats['protein'] ?? 0;
+    final carbs = todayStats['carbs'] ?? 0;
+    final fat = todayStats['fat'] ?? 0;
+    final waterMl = todayStats['waterMl'] ?? 0;
+    final currentGoal = todayStats['goal'] ?? 'Balanced';
+    final foodsSummary = todayStats['foodsSummary'] ?? 'Chưa ghi nhận món nào';
+
+    final userBioContext = userProfile != null
+        ? '''
+Hồ sơ sinh trắc học người dùng:
+- Họ tên: ${userProfile.name}
+- Giới tính: ${userProfile.gender == 'female' ? 'Nữ' : 'Nam'}, Tuổi: ${userProfile.age}
+- Chiều cao: ${userProfile.height} cm, Cân nặng: ${userProfile.weight} kg, BMI: ${userProfile.bmi.toStringAsFixed(1)} (${userProfile.bmiCategory})
+- Cân nặng mục tiêu: ${userProfile.targetWeight} kg
+- Mục tiêu thể hình/dinh dưỡng: ${userProfile.goalDisplayName} (${userProfile.fitnessGoal})
+- Tỷ lệ trao đổi chất cơ bản (BMR): ${userProfile.bmr.round()} kcal/ngày
+- Tổng năng lượng tiêu hao ước tính (TDEE): ${userProfile.tdee.round()} kcal/ngày
+- Mục tiêu calo khoa học: ${userProfile.targetCalories} kcal (Protein: ${userProfile.targetMacros['protein']}g, Carbs: ${userProfile.targetMacros['carbs']}g, Fat: ${userProfile.targetMacros['fat']}g)
+'''
+        : '';
+
+    final systemInstruction = '''
+Bạn là Gemini Nutritionist - Chuyên gia dinh dưỡng và huấn luyện viên sức khỏe thông minh hàng đầu.
+$userBioContext
+Bối cảnh dinh dưỡng thực tế hôm nay:
+- Tổng Calo nạp: $caloriesIn kcal
+- Tổng Calo tiêu hao: $caloriesBurned kcal
+- Macro nạp: $protein g Protein, $carbs g Carbs, $fat g Fat
+- Lượng nước đã uống: $waterMl ml
+- Mục tiêu dinh dưỡng: $currentGoal
+- Các món đã ăn hôm nay: $foodsSummary
+
+Phong cách trả lời:
+- Nhiệt tình, truyền cảm hứng, chuyên nghiệp và súc tích (khoảng 2-4 đoạn hoặc gạch đầu dòng rõ ràng).
+- Liên kết chặt chẽ số liệu hôm nay với mục tiêu sinh trắc học cá nhân của người dùng.
+- Sử dụng tiếng Việt thân thiện, dễ hiểu, có emoji sinh động.
+''';
+
+    final List<Content> chatHistory = [];
+    if (history != null) {
+      for (final msg in history) {
+        if (msg['role'] == 'user') {
+          chatHistory.add(Content.text(msg['text'] ?? ''));
+        } else if (msg['role'] == 'model') {
+          chatHistory.add(Content.model([TextPart(msg['text'] ?? '')]));
+        }
+      }
+    }
+
+    chatHistory.add(Content.text(message));
+
+    yield* _generateStreamWithFallback(
+      chatHistory,
+      systemInstruction: Content.system(systemInstruction),
+    );
   }
 
   /// AI Personal Coach: Generates an instant personalized workout plan
