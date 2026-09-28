@@ -582,10 +582,20 @@ Customize intensity, difficulty, and form coaching to be safe and maximally effe
 '''
         : '';
 
+    final String equipmentInstruction;
+    final lowerEq = equipment.toLowerCase();
+    if (lowerEq.contains('dumbbell') || lowerEq.contains('tạ')) {
+      equipmentInstruction = 'Dumbbells only. Emphasize home dumbbell exercises such as Dumbbell Floor Press, Overhead Shoulder Press, Bent-over Row, Goblet Squat, Dumbbell Bicep Curls, Lateral Raises, and Romanian Deadlifts.';
+    } else if (lowerEq.contains('hybrid') || lowerEq.contains('kết hợp')) {
+      equipmentInstruction = 'Hybrid combination of Dumbbells and Bodyweight movements (combine Push-ups, Squats, Planks with Dumbbell Press, Rows, and Deadlifts).';
+    } else {
+      equipmentInstruction = 'Bodyweight only without any weights (e.g. Push-ups, Pull-ups, Squats, Planks, Burpees, Lunges).';
+    }
+
     final prompt = '''
 You are a top-tier personal fitness trainer. Create a custom, highly effective $durationMinutes-minute home workout routine.
 Target Goal: $goal
-Equipment Available: $equipment (strictly bodyweight movements)
+Equipment Available: $equipment ($equipmentInstruction)
 $userBioContext
 
 MANDATORY REQUIREMENT: Return ONLY a valid JSON object matching the exact structure below, without any markdown formatting or extra commentary:
@@ -593,10 +603,10 @@ MANDATORY REQUIREMENT: Return ONLY a valid JSON object matching the exact struct
   "title": "Inspiring routine title in English",
   "durationMinutes": $durationMinutes,
   "targetGoal": "$goal",
-  "estimatedCalories": (realistic integer between 70 and 350 depending on duration),
+  "estimatedCalories": (realistic integer between 70 and 450 depending on duration),
   "exercises": [
     {
-      "name": "Exercise Name (e.g., Push-ups, Squats, Mountain Climbers)",
+      "name": "Exercise Name (e.g., Dumbbell Floor Press, Push-ups, Goblet Squat)",
       "sets": (integer 2 to 4),
       "repsOrDuration": "e.g., 12 reps or 45s",
       "formNote": "Concise key form tip for safety and effectiveness"
@@ -629,13 +639,161 @@ MANDATORY REQUIREMENT: Return ONLY a valid JSON object matching the exact struct
       }
     }
 
-    return _getFallbackRoutine(durationMinutes, goal);
+    return _getFallbackRoutine(durationMinutes, goal, equipment);
   }
 
   /// Built-in intelligent fallback routine generator (100% reliable offline)
-  static CustomWorkoutRoutine _getFallbackRoutine(int durationMinutes, String goal) {
+  static CustomWorkoutRoutine _getFallbackRoutine(int durationMinutes, String goal, [String equipment = 'bodyweight']) {
     final lowerGoal = goal.toLowerCase();
+    final lowerEq = equipment.toLowerCase();
+    final isDumbbell = lowerEq.contains('dumbbell') || lowerEq.contains('tạ');
+    final isHybrid = lowerEq.contains('hybrid') || lowerEq.contains('kết hợp');
 
+    // 1. Dumbbell routine
+    if (isDumbbell) {
+      return CustomWorkoutRoutine(
+        title: 'Dumbbell Hypertrophy & Power',
+        durationMinutes: durationMinutes,
+        targetGoal: goal,
+        estimatedCalories: durationMinutes * 8,
+        exercises: const [
+          WorkoutExerciseItem(
+            name: 'Đẩy ngực tạ đơn',
+            sets: 3,
+            repsOrDuration: '10-12 reps',
+            formNote: 'Keep shoulder blades retracted and drive dumbbells smoothly upward.',
+          ),
+          WorkoutExerciseItem(
+            name: 'Kéo tạ lưng xô',
+            sets: 3,
+            repsOrDuration: '12 reps',
+            formNote: 'Hinge forward at 45 degrees, pull dumbbells toward hip pockets.',
+          ),
+          WorkoutExerciseItem(
+            name: 'Squat ôm tạ Goblet',
+            sets: 3,
+            repsOrDuration: '12 reps',
+            formNote: 'Hold dumbbell vertically against chest, squat deep through heels.',
+          ),
+          WorkoutExerciseItem(
+            name: 'Đẩy vai qua đầu',
+            sets: 3,
+            repsOrDuration: '10 reps',
+            formNote: 'Press vertically overhead without hyperextending lower back.',
+          ),
+        ],
+      );
+    }
+
+    // 2. Hybrid routine
+    if (isHybrid) {
+      return CustomWorkoutRoutine(
+        title: 'Hybrid Functional Strength & Cardio',
+        durationMinutes: durationMinutes,
+        targetGoal: goal,
+        estimatedCalories: durationMinutes * 9,
+        exercises: const [
+          WorkoutExerciseItem(
+            name: 'Đẩy ngực tạ đơn',
+            sets: 3,
+            repsOrDuration: '10 reps',
+            formNote: 'Focus on chest contraction at top of each press.',
+          ),
+          WorkoutExerciseItem(
+            name: 'Hít đất',
+            sets: 3,
+            repsOrDuration: '12 reps',
+            formNote: 'Explosive push up, control 2 seconds down.',
+          ),
+          WorkoutExerciseItem(
+            name: 'Squat ôm tạ Goblet',
+            sets: 3,
+            repsOrDuration: '12 reps',
+            formNote: 'Brace core tightly and sink hips back.',
+          ),
+          WorkoutExerciseItem(
+            name: 'Plank siết cơ bụng',
+            sets: 3,
+            repsOrDuration: '45s hold',
+            formNote: 'Maintain completely straight line from shoulders to ankles.',
+          ),
+        ],
+      );
+    }
+
+    // 3. Upper body focus
+    if (lowerGoal.contains('upper') || lowerGoal.contains('ngực') || lowerGoal.contains('tay') || lowerGoal.contains('vai')) {
+      return CustomWorkoutRoutine(
+        title: 'Upper Body Armor & Pump',
+        durationMinutes: durationMinutes,
+        targetGoal: 'Upper Body Strength',
+        estimatedCalories: durationMinutes * 8,
+        exercises: const [
+          WorkoutExerciseItem(
+            name: 'Hít đất',
+            sets: 3,
+            repsOrDuration: '15 reps',
+            formNote: 'Keep elbows at 45 degrees, full lockout at top.',
+          ),
+          WorkoutExerciseItem(
+            name: 'Hít đất kim cương',
+            sets: 3,
+            repsOrDuration: '10 reps',
+            formNote: 'Index fingers and thumbs forming a diamond to isolate triceps.',
+          ),
+          WorkoutExerciseItem(
+            name: 'Hít xà đơn',
+            sets: 3,
+            repsOrDuration: '8 reps',
+            formNote: 'Lead with chest, pull chin fully over bar with control.',
+          ),
+          WorkoutExerciseItem(
+            name: 'Plank siết cơ bụng',
+            sets: 3,
+            repsOrDuration: '45s hold',
+            formNote: 'Solid core brace throughout.',
+          ),
+        ],
+      );
+    }
+
+    // 4. Lower body focus
+    if (lowerGoal.contains('lower') || lowerGoal.contains('chân') || lowerGoal.contains('mông') || lowerGoal.contains('glute')) {
+      return CustomWorkoutRoutine(
+        title: 'Lower Body Glute & Leg Sculpt',
+        durationMinutes: durationMinutes,
+        targetGoal: 'Glutes & Legs Sculpting',
+        estimatedCalories: durationMinutes * 8,
+        exercises: const [
+          WorkoutExerciseItem(
+            name: 'Squat tự do',
+            sets: 3,
+            repsOrDuration: '20 reps',
+            formNote: 'Deep squat below parallel, push knees outward.',
+          ),
+          WorkoutExerciseItem(
+            name: 'Chùng chân Lunges',
+            sets: 3,
+            repsOrDuration: '16 reps (8 each leg)',
+            formNote: 'Step forward keeping front shin perpendicular to floor.',
+          ),
+          WorkoutExerciseItem(
+            name: 'Cầu mông Glute Bridge',
+            sets: 3,
+            repsOrDuration: '15 slow reps',
+            formNote: '2-second squeeze at the peak of hip bridge.',
+          ),
+          WorkoutExerciseItem(
+            name: 'Nhảy Burpees đốt mỡ',
+            sets: 3,
+            repsOrDuration: '10 reps',
+            formNote: 'Explosive jump at end of each repetition.',
+          ),
+        ],
+      );
+    }
+
+    // 5. Abs / Core focus
     if (lowerGoal.contains('abs') || lowerGoal.contains('core') || lowerGoal.contains('bụng')) {
       return CustomWorkoutRoutine(
         title: 'Core Blast & Six-Pack Shred',
@@ -644,28 +802,28 @@ MANDATORY REQUIREMENT: Return ONLY a valid JSON object matching the exact struct
         estimatedCalories: durationMinutes * 7,
         exercises: const [
           WorkoutExerciseItem(
-            name: 'High-intensity Plank',
+            name: 'Plank siết cơ bụng',
             sets: 3,
             repsOrDuration: '45s hold',
             formNote: 'Keep spine straight and squeeze glutes firmly.',
           ),
           WorkoutExerciseItem(
-            name: 'Bicycle Crunches',
+            name: 'Gập bụng Crunch',
             sets: 3,
-            repsOrDuration: '20 reps (10 each side)',
-            formNote: 'Touch elbow to opposite knee without yanking your neck.',
+            repsOrDuration: '20 reps',
+            formNote: 'Curl shoulders off floor while exhaling forcefully.',
           ),
           WorkoutExerciseItem(
-            name: 'Russian Twists',
-            sets: 3,
-            repsOrDuration: '24 reps',
-            formNote: 'Lean back 45 degrees and rotate shoulders fully.',
-          ),
-          WorkoutExerciseItem(
-            name: 'Mountain Climbers',
+            name: 'Leo núi Mountain Climbers',
             sets: 3,
             repsOrDuration: '30s sprint',
             formNote: 'Sprint knees toward chest while maintaining low hips.',
+          ),
+          WorkoutExerciseItem(
+            name: 'Bicycle Crunches',
+            sets: 3,
+            repsOrDuration: '20 reps',
+            formNote: 'Touch elbow to opposite knee without pulling on neck.',
           ),
         ],
       );
@@ -695,7 +853,7 @@ MANDATORY REQUIREMENT: Return ONLY a valid JSON object matching the exact struct
             formNote: 'Drive heel upward without arching the lumbar spine.',
           ),
           WorkoutExerciseItem(
-            name: 'Knee Plank (Gentle Core)',
+            name: 'Plank siết cơ bụng',
             sets: 3,
             repsOrDuration: '40s hold',
             formNote: 'Maintain neutral neck and engaged transverse abdominal wall.',
@@ -711,25 +869,25 @@ MANDATORY REQUIREMENT: Return ONLY a valid JSON object matching the exact struct
         estimatedCalories: durationMinutes * 9,
         exercises: const [
           WorkoutExerciseItem(
-            name: 'Burpees (Full Body Fat Burn)',
+            name: 'Nhảy Burpees đốt mỡ',
             sets: 3,
             repsOrDuration: '10 reps',
             formNote: 'Explode up with hands clapping overhead after each push-up.',
           ),
           WorkoutExerciseItem(
-            name: 'Push-ups',
+            name: 'Hít đất',
             sets: 3,
             repsOrDuration: '12-15 reps',
             formNote: 'Chest 3cm from floor, elbows at 45-degree angle.',
           ),
           WorkoutExerciseItem(
-            name: 'Squats (Glutes & Legs)',
+            name: 'Squat tự do',
             sets: 3,
             repsOrDuration: '20 deep reps',
             formNote: 'Thighs parallel to ground, drive through heels on ascent.',
           ),
           WorkoutExerciseItem(
-            name: 'Jumping Lunges',
+            name: 'Chùng chân Lunges',
             sets: 3,
             repsOrDuration: '16 reps (8 each leg)',
             formNote: 'Land softly on balls of feet with knees tracking straight.',

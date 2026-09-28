@@ -6,6 +6,7 @@ import '../services/locale_service.dart';
 import '../services/storage_service.dart';
 import '../screens/active_workout_screen.dart';
 import '../theme.dart';
+import '../utils/app_haptics.dart';
 
 class AiCoachCardWidget extends StatefulWidget {
   final VoidCallback? onWorkoutStarted;
@@ -20,32 +21,54 @@ class AiCoachCardWidget extends StatefulWidget {
 }
 
 class _AiCoachCardWidgetState extends State<AiCoachCardWidget> {
-  int _selectedMinutes = 10;
+  int _selectedMinutes = 15;
+  bool _isCustomMinutes = false;
   String _selectedGoalKey = 'goal_fat_burn';
+  String _selectedEquipment = 'bodyweight'; // 'bodyweight' | 'dumbbell' | 'hybrid'
   bool _isLoading = false;
   CustomWorkoutRoutine? _generatedRoutine;
   String? _errorMessage;
   UserProfile? _userProfile;
 
-  final List<int> _durations = [10, 20, 30];
+  final TextEditingController _customGoalController = TextEditingController();
+  final List<int> _durations = [10, 15, 20, 30, 45, 60];
+
   final List<Map<String, dynamic>> _goals = [
     {
       'key': 'goal_fat_burn',
       'fallback': 'Full Body Fat Burn',
-      'hugeIcon': HugeIcons.strokeRoundedFire,
+      'icon': Icons.local_fire_department_rounded,
       'color': const Color(0xFFFF3B30),
     },
     {
       'key': 'goal_core_abs',
-      'fallback': 'Core & Abs',
-      'hugeIcon': HugeIcons.strokeRoundedBodyPartSixPack,
+      'fallback': 'Core & Abs Sculpting',
+      'icon': Icons.sports_gymnastics_rounded,
       'color': const Color(0xFFFFD700),
+    },
+    {
+      'key': 'goal_upper_body',
+      'fallback': 'Upper Body Strength (Chest & Arms)',
+      'icon': Icons.fitness_center_rounded,
+      'color': const Color(0xFF00F0FF),
+    },
+    {
+      'key': 'goal_lower_body',
+      'fallback': 'Lower Body (Glutes & Legs)',
+      'icon': Icons.directions_run_rounded,
+      'color': const Color(0xFFFF2D55),
     },
     {
       'key': 'goal_flexibility',
       'fallback': 'Flexibility & Back Relief',
-      'hugeIcon': HugeIcons.strokeRoundedYoga01,
-      'color': const Color(0xFF00F0FF),
+      'icon': Icons.self_improvement_rounded,
+      'color': const Color(0xFF30D158),
+    },
+    {
+      'key': 'goal_hiit_cardio',
+      'fallback': 'High Intensity Cardio & Stamina',
+      'icon': Icons.bolt_rounded,
+      'color': const Color(0xFFFF9500),
     },
   ];
 
@@ -59,6 +82,7 @@ class _AiCoachCardWidgetState extends State<AiCoachCardWidget> {
   @override
   void dispose() {
     StorageService.profileUpdateNotifier.removeListener(_loadProfile);
+    _customGoalController.dispose();
     super.dispose();
   }
 
@@ -72,12 +96,61 @@ class _AiCoachCardWidgetState extends State<AiCoachCardWidget> {
         if (userGoal == 'cutting') {
           _selectedGoalKey = 'goal_fat_burn';
         } else if (userGoal == 'bulking') {
-          _selectedGoalKey = 'goal_core_abs';
+          _selectedGoalKey = 'goal_upper_body';
         } else if (userGoal == 'endurance') {
-          _selectedGoalKey = 'goal_flexibility';
+          _selectedGoalKey = 'goal_hiit_cardio';
         }
       });
     }
+  }
+
+  void _showCustomDurationDialog() {
+    final controller = TextEditingController(text: '$_selectedMinutes');
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppTheme.cardColor,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text(
+          LocaleService.tr('custom_duration_dialog_title'),
+          style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+        ),
+        content: TextField(
+          controller: controller,
+          keyboardType: TextInputType.number,
+          autofocus: true,
+          style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+          decoration: InputDecoration(
+            hintText: LocaleService.tr('custom_duration_hint'),
+            hintStyle: const TextStyle(color: Colors.grey),
+            suffixText: 'phút',
+            suffixStyle: const TextStyle(color: Color(0xFF00F0FF)),
+            enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.white24)),
+            focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFF00F0FF))),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(LocaleService.tr('continue_btn'), style: const TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final parsed = int.tryParse(controller.text);
+              if (parsed != null && parsed >= 5 && parsed <= 180) {
+                setState(() {
+                  _selectedMinutes = parsed;
+                  _isCustomMinutes = true;
+                });
+                Navigator.pop(ctx);
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryColor),
+            child: const Text('OK', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _generateRoutine() async {
@@ -87,18 +160,28 @@ class _AiCoachCardWidgetState extends State<AiCoachCardWidget> {
     });
 
     try {
-      // Re-fetch latest fresh profile from storage to ensure real-time biometrics
       final freshProfile = await StorageService.getUserProfile();
       _userProfile = freshProfile;
 
-      final goalItem = _goals.firstWhere(
-        (g) => g['key'] == _selectedGoalKey,
-        orElse: () => _goals.first,
-      );
+      // Xác định mục tiêu bài tập: Ưu tiên mục tiêu người dùng tự nhập
+      final customGoalText = _customGoalController.text.trim();
+      final String effectiveGoal;
+      if (customGoalText.isNotEmpty) {
+        effectiveGoal = customGoalText;
+      } else {
+        final goalItem = _goals.firstWhere(
+          (g) => g['key'] == _selectedGoalKey,
+          orElse: () => _goals.first,
+        );
+        effectiveGoal = LocaleService.isVietnamese
+            ? LocaleService.tr(goalItem['key'] as String)
+            : (goalItem['fallback'] as String? ?? 'Full Body Fat Burn');
+      }
+
       final routine = await GeminiService.generateCustomWorkout(
         durationMinutes: _selectedMinutes,
-        goal: goalItem['fallback'] ?? 'Full Body Fat Burn',
-        equipment: 'Bodyweight only',
+        goal: effectiveGoal,
+        equipment: _selectedEquipment,
         userProfile: freshProfile,
       );
       if (mounted) {
@@ -128,6 +211,11 @@ class _AiCoachCardWidgetState extends State<AiCoachCardWidget> {
           title: routine.title,
           durationSeconds: routine.durationMinutes * 60,
           estimatedCalories: routine.estimatedCalories,
+          equipment: _selectedEquipment,
+          isRepsBased: true,
+          targetSets: 3,
+          targetReps: 12,
+          weightKg: _selectedEquipment == 'bodyweight' ? null : 10.0,
         ),
       ),
     );
@@ -260,15 +348,16 @@ class _AiCoachCardWidgetState extends State<AiCoachCardWidget> {
               ),
             ),
             const SizedBox(height: 8),
-            Row(
-              children: _durations.map((mins) {
-                final isSelected = _selectedMinutes == mins;
-                return Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 4.0),
-                    child: ChoiceChip(
-                      label: Center(
-                        child: Text(
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  ..._durations.map((mins) {
+                    final isSelected = !_isCustomMinutes && _selectedMinutes == mins;
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 8.0),
+                      child: ChoiceChip(
+                        label: Text(
                           LocaleService.tr('mins_chip', args: {'mins': '$mins'}),
                           style: TextStyle(
                             fontWeight: FontWeight.w700,
@@ -276,33 +365,65 @@ class _AiCoachCardWidgetState extends State<AiCoachCardWidget> {
                             color: isSelected ? Colors.black : AppTheme.textPrimaryColor,
                           ),
                         ),
-                      ),
-                      selected: isSelected,
-                      selectedColor: AppTheme.primaryColor,
-                      backgroundColor: Colors.white.withValues(alpha: 0.05),
-                      showCheckmark: false,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        side: BorderSide(
-                          color: isSelected
-                              ? AppTheme.primaryColor
-                              : Colors.white.withValues(alpha: 0.1),
+                        selected: isSelected,
+                        selectedColor: AppTheme.primaryColor,
+                        backgroundColor: Colors.white.withValues(alpha: 0.05),
+                        showCheckmark: false,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          side: BorderSide(
+                            color: isSelected
+                                ? AppTheme.primaryColor
+                                : Colors.white.withValues(alpha: 0.1),
+                          ),
                         ),
+                        onSelected: (selected) {
+                          if (selected) {
+                            setState(() {
+                              _selectedMinutes = mins;
+                              _isCustomMinutes = false;
+                            });
+                          }
+                        },
                       ),
-                      onSelected: (selected) {
-                        if (selected) {
-                          setState(() => _selectedMinutes = mins);
-                        }
-                      },
+                    );
+                  }),
+                  // Nút Tùy chỉnh phút
+                  ChoiceChip(
+                    avatar: Icon(
+                      Icons.edit_calendar_rounded,
+                      size: 14,
+                      color: _isCustomMinutes ? Colors.black : const Color(0xFF00F0FF),
                     ),
+                    label: Text(
+                      _isCustomMinutes
+                          ? '$_selectedMinutes phút'
+                          : LocaleService.tr('custom_duration_chip'),
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 12,
+                        color: _isCustomMinutes ? Colors.black : const Color(0xFF00F0FF),
+                      ),
+                    ),
+                    selected: _isCustomMinutes,
+                    selectedColor: const Color(0xFF00F0FF),
+                    backgroundColor: Colors.white.withValues(alpha: 0.05),
+                    showCheckmark: false,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      side: BorderSide(
+                        color: _isCustomMinutes ? const Color(0xFF00F0FF) : Colors.white12,
+                      ),
+                    ),
+                    onSelected: (_) => _showCustomDurationDialog(),
                   ),
-                );
-              }).toList(),
+                ],
+              ),
             ),
 
             const SizedBox(height: 16),
 
-            // 2. Goal Selection
+            // 2. Goal Selection (Mục tiêu bài tập)
             Text(
               LocaleService.tr('workout_goal'),
               style: const TextStyle(
@@ -318,15 +439,16 @@ class _AiCoachCardWidgetState extends State<AiCoachCardWidget> {
               runSpacing: 8,
               children: _goals.map((goal) {
                 final label = LocaleService.tr(goal['key'] as String);
-                final hugeIcon = goal['hugeIcon'] as List<List<dynamic>>;
+                final icon = goal['icon'] as IconData;
                 final iconColor = goal['color'] as Color;
-                final isSelected = _selectedGoalKey == goal['key'];
+                final isSelected = _customGoalController.text.trim().isEmpty &&
+                    _selectedGoalKey == goal['key'];
                 return ChoiceChip(
                   label: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      HugeIcon(
-                        icon: hugeIcon,
+                      Icon(
+                        icon,
                         size: 16,
                         color: isSelected ? Colors.black : iconColor,
                       ),
@@ -355,48 +477,115 @@ class _AiCoachCardWidgetState extends State<AiCoachCardWidget> {
                   ),
                   onSelected: (selected) {
                     if (selected) {
-                      setState(() => _selectedGoalKey = goal['key'] as String);
+                      setState(() {
+                        _selectedGoalKey = goal['key'] as String;
+                        _customGoalController.clear();
+                      });
                     }
                   },
                 );
               }).toList(),
             ),
 
-            const SizedBox(height: 16),
+            const SizedBox(height: 10),
 
-            // 3. Equipment Pill
+            // Ô nhập mục tiêu mong muốn tự do
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.04),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                color: Colors.white.withValues(alpha: 0.05),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: _customGoalController.text.trim().isNotEmpty
+                      ? const Color(0xFF00F0FF)
+                      : Colors.white.withValues(alpha: 0.1),
+                ),
               ),
               child: Row(
-                mainAxisSize: MainAxisSize.min,
                 children: [
-                  const HugeIcon(
-                    icon: HugeIcons.strokeRoundedBodyWeight,
-                    size: 16,
+                  const Icon(
+                    Icons.edit_note_rounded,
                     color: Color(0xFF00F0FF),
+                    size: 20,
                   ),
                   const SizedBox(width: 8),
-                  Flexible(
-                    child: Text(
-                      LocaleService.tr('equipment_label'),
+                  Expanded(
+                    child: TextField(
+                      controller: _customGoalController,
                       style: const TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: AppTheme.textSecondaryColor,
+                        color: Colors.white,
+                        fontSize: 12.5,
                       ),
-                      overflow: TextOverflow.ellipsis,
+                      decoration: InputDecoration(
+                        hintText: LocaleService.tr('custom_goal_hint'),
+                        hintStyle: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.4),
+                          fontSize: 12,
+                        ),
+                        border: InputBorder.none,
+                        isDense: true,
+                        contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                      ),
+                      onChanged: (val) {
+                        setState(() {});
+                      },
                     ),
+                  ),
+                  if (_customGoalController.text.isNotEmpty)
+                    GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          _customGoalController.clear();
+                        });
+                      },
+                      child: const Icon(Icons.close_rounded, size: 18, color: Colors.white54),
+                    ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 16),
+
+            // 3. Equipment Selection (Dụng cụ tập luyện - Hỗ trợ Tạ đơn)
+            Text(
+              LocaleService.tr('ai_equipment_title'),
+              style: const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 1.0,
+                color: AppTheme.textSecondaryColor,
+              ),
+            ),
+            const SizedBox(height: 8),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  _buildEquipmentChip(
+                    id: 'bodyweight',
+                    title: LocaleService.tr('ai_equipment_bodyweight'),
+                    icon: Icons.accessibility_new_rounded,
+                    color: const Color(0xFF00F0FF),
+                  ),
+                  const SizedBox(width: 8),
+                  _buildEquipmentChip(
+                    id: 'dumbbell',
+                    title: LocaleService.tr('ai_equipment_dumbbell'),
+                    icon: Icons.fitness_center_rounded,
+                    color: AppTheme.primaryColor,
+                  ),
+                  const SizedBox(width: 8),
+                  _buildEquipmentChip(
+                    id: 'hybrid',
+                    title: LocaleService.tr('ai_equipment_hybrid'),
+                    icon: Icons.bolt_rounded,
+                    color: const Color(0xFFFFD700),
                   ),
                 ],
               ),
             ),
 
-            const SizedBox(height: 18),
+            const SizedBox(height: 20),
 
             // Generate Button
             SizedBox(
@@ -497,7 +686,49 @@ class _AiCoachCardWidgetState extends State<AiCoachCardWidget> {
     );
   }
 
+  Widget _buildEquipmentChip({
+    required String id,
+    required String title,
+    required IconData icon,
+    required Color color,
+  }) {
+    final isSelected = _selectedEquipment == id;
+    return ChoiceChip(
+      avatar: Icon(
+        icon,
+        size: 15,
+        color: isSelected ? Colors.black : color,
+      ),
+      label: Text(
+        title,
+        style: TextStyle(
+          fontWeight: FontWeight.w700,
+          fontSize: 11.5,
+          color: isSelected ? Colors.black : AppTheme.textPrimaryColor,
+        ),
+      ),
+      selected: isSelected,
+      selectedColor: color,
+      backgroundColor: Colors.white.withValues(alpha: 0.05),
+      showCheckmark: false,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: isSelected ? color : Colors.white.withValues(alpha: 0.1),
+        ),
+      ),
+      onSelected: (selected) {
+        if (selected) {
+          setState(() => _selectedEquipment = id);
+          AppHaptics.selection();
+        }
+      },
+    );
+  }
+
   Widget _buildRoutinePreview(CustomWorkoutRoutine routine) {
+    final isDumbbell = _selectedEquipment != 'bodyweight';
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -507,13 +738,39 @@ class _AiCoachCardWidgetState extends State<AiCoachCardWidget> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(
-              child: Text(
-                routine.title,
-                style: const TextStyle(
-                  fontSize: 17,
-                  fontWeight: FontWeight.w900,
-                  color: AppTheme.textPrimaryColor,
-                ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    routine.title,
+                    style: const TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w900,
+                      color: AppTheme.textPrimaryColor,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: (isDumbbell ? AppTheme.primaryColor : const Color(0xFF00F0FF))
+                          .withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      _selectedEquipment == 'dumbbell'
+                          ? '🏋️ ${LocaleService.tr('ai_equipment_dumbbell')}'
+                          : _selectedEquipment == 'hybrid'
+                              ? '⚡ ${LocaleService.tr('ai_equipment_hybrid')}'
+                              : '🏃 ${LocaleService.tr('ai_equipment_bodyweight')}',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        color: isDumbbell ? AppTheme.primaryColor : const Color(0xFF00F0FF),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
             Container(
@@ -658,7 +915,7 @@ class _AiCoachCardWidgetState extends State<AiCoachCardWidget> {
             onPressed: () => _startWorkout(routine),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppTheme.primaryColor,
-              foregroundColor: Colors.black,
+              foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(vertical: 14),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),
@@ -667,7 +924,7 @@ class _AiCoachCardWidgetState extends State<AiCoachCardWidget> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const HugeIcon(icon: HugeIcons.strokeRoundedPlay, size: 20, color: Colors.black),
+                const Icon(Icons.play_arrow_rounded, size: 22, color: Colors.white),
                 const SizedBox(width: 6),
                 Text(
                   LocaleService.tr('start_workout_btn'),
@@ -675,6 +932,7 @@ class _AiCoachCardWidgetState extends State<AiCoachCardWidget> {
                     fontWeight: FontWeight.w900,
                     letterSpacing: 1.0,
                     fontSize: 14,
+                    color: Colors.white,
                   ),
                 ),
               ],

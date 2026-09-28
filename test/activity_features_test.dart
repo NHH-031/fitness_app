@@ -5,6 +5,7 @@ import 'package:fitness_tracker/services/gemini_service.dart';
 import 'package:fitness_tracker/services/locale_service.dart';
 import 'package:fitness_tracker/widgets/exercise_pose_widget.dart';
 import 'package:fitness_tracker/screens/workout_screen.dart';
+import 'package:fitness_tracker/widgets/workout_setup_sheet.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -297,6 +298,88 @@ void main() {
         weightKg: 10.0,
       );
       expect(db.weightKg, 10.0);
+    });
+
+    test('WorkoutCalorieHelper recalculates calories proportionally based on sets and reps', () {
+      // 3 sets x 15 reps = 45 reps at 120 kcal base -> ~2.67 kcal/rep
+      final calculatedStandard = WorkoutCalorieHelper.calculateAdjustedCalories(
+        baseCalories: 120,
+        baseSets: 3,
+        baseRepsOrSeconds: 15,
+        userSets: 3,
+        userRepsOrSeconds: 15,
+      );
+      expect(calculatedStandard, 120);
+
+      // User increases to 4 sets x 15 reps = 60 reps -> (60/45) * 120 = 160 kcal
+      final calculatedHigherSets = WorkoutCalorieHelper.calculateAdjustedCalories(
+        baseCalories: 120,
+        baseSets: 3,
+        baseRepsOrSeconds: 15,
+        userSets: 4,
+        userRepsOrSeconds: 15,
+      );
+      expect(calculatedHigherSets, 160);
+
+      // User reduces to 2 sets x 10 reps = 20 reps -> (20/45) * 120 = 53 kcal
+      final calculatedLower = WorkoutCalorieHelper.calculateAdjustedCalories(
+        baseCalories: 120,
+        baseSets: 3,
+        baseRepsOrSeconds: 15,
+        userSets: 2,
+        userRepsOrSeconds: 10,
+      );
+      expect(calculatedLower, 53);
+    });
+
+    test('WorkoutCalorieHelper adjusts for dumbbell weight progression', () {
+      // 10kg base vs 15kg user -> heavier load increases burn
+      final cal10kg = WorkoutCalorieHelper.calculateAdjustedCalories(
+        baseCalories: 100,
+        baseSets: 3,
+        baseRepsOrSeconds: 10,
+        userSets: 3,
+        userRepsOrSeconds: 10,
+        baseWeight: 10.0,
+        userWeight: 10.0,
+      );
+      expect(cal10kg, 100);
+
+      final cal15kg = WorkoutCalorieHelper.calculateAdjustedCalories(
+        baseCalories: 100,
+        baseSets: 3,
+        baseRepsOrSeconds: 10,
+        userSets: 3,
+        userRepsOrSeconds: 10,
+        baseWeight: 10.0,
+        userWeight: 15.0,
+      );
+      expect(cal15kg > 100, true);
+    });
+
+    test('GeminiService fallback generates dumbbell workout when equipment is dumbbell', () async {
+      final routine = await GeminiService.generateCustomWorkout(
+        durationMinutes: 20,
+        goal: 'Tăng cơ ngực và tay',
+        equipment: 'dumbbell',
+      );
+      expect(routine.durationMinutes, 20);
+      expect(routine.exercises.isNotEmpty, true);
+      final hasDumbbellExercise = routine.exercises.any(
+        (ex) => ex.name.toLowerCase().contains('tạ') || ex.name.toLowerCase().contains('dumbbell'),
+      );
+      expect(hasDumbbellExercise, true);
+    });
+
+    test('GeminiService fallback generates hybrid workout when equipment is hybrid', () async {
+      final routine = await GeminiService.generateCustomWorkout(
+        durationMinutes: 25,
+        goal: 'Cardio và sức mạnh',
+        equipment: 'hybrid',
+      );
+      expect(routine.durationMinutes, 25);
+      expect(routine.exercises.isNotEmpty, true);
+      expect(routine.title.toLowerCase().contains('hybrid'), true);
     });
   });
 }

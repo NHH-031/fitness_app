@@ -8,6 +8,7 @@ import '../widgets/badges_achievement_widget.dart';
 import '../widgets/app_ui_components.dart';
 import '../services/locale_service.dart';
 import '../services/storage_service.dart';
+import '../widgets/workout_setup_sheet.dart';
 import 'active_workout_screen.dart';
 
 enum ExerciseEquipmentFilter { all, bodyweight, dumbbell }
@@ -1182,18 +1183,21 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
                       hapticType: AppHapticFeedbackType.medium,
                       scaleDown: 0.96,
                       onTap: () async {
+                        final setupResult = await WorkoutSetupSheet.show(context, exercise: ex);
+                        if (setupResult == null || !context.mounted) return;
+
                         final completed = await Navigator.push<bool>(
                           context,
                           MaterialPageRoute(
                             builder: (context) => ActiveWorkoutScreen(
                               title: ex.title,
-                              durationSeconds: ex.durationSeconds,
-                              estimatedCalories: ex.caloriesValue,
+                              durationSeconds: setupResult.durationSeconds,
+                              estimatedCalories: setupResult.estimatedCalories,
                               equipment: ex.equipment,
                               isRepsBased: ex.isReps,
-                              targetSets: ex.targetSets,
-                              targetReps: ex.targetReps,
-                              weightKg: ex.weightKg,
+                              targetSets: setupResult.targetSets,
+                              targetReps: setupResult.targetReps,
+                              weightKg: setupResult.weightKg,
                               restDurationSeconds: ex.restSeconds,
                             ),
                           ),
