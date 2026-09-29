@@ -11,11 +11,11 @@ class NutritionRepository {
   static final NutritionRepository instance = NutritionRepository._();
 
   // In-memory cache ngày tháng phục vụ việc hiển thị Dashboard tức thì
-  static Map<String, List<FoodLogEntry>>? _cachedFoodByDate;
+  static Map<String, List<FoodLogEntry>>? cachedFoodByDate;
 
   /// Xóa sạch bộ nhớ cache ram
   static void invalidateCache() {
-    _cachedFoodByDate = null;
+    cachedFoodByDate = null;
   }
 
   static String _formatDate(DateTime dt) {
@@ -36,9 +36,12 @@ class NutritionRepository {
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
 
-    // Cập nhật bộ nhớ cache ram
-    if (_cachedFoodByDate != null) {
-      _cachedFoodByDate!.putIfAbsent(dateStr, () => []).insert(0, entry);
+    // Cập nhật bộ nhớ cache ram (tránh trùng lặp)
+    if (cachedFoodByDate != null) {
+      final list = cachedFoodByDate!.putIfAbsent(dateStr, () => []);
+      if (!list.any((e) => e.id == entry.id)) {
+        list.insert(0, entry);
+      }
     }
 
     // Đẩy lên Firestore
@@ -69,8 +72,8 @@ class NutritionRepository {
 
   /// Lấy danh sách món ăn theo chuỗi ngày YYYY-MM-DD
   Future<List<FoodLogEntry>> getFoodLogsByDateStr(String dateStr) async {
-    if (_cachedFoodByDate != null && _cachedFoodByDate!.containsKey(dateStr)) {
-      return List.from(_cachedFoodByDate![dateStr]!);
+    if (cachedFoodByDate != null && cachedFoodByDate!.containsKey(dateStr)) {
+      return List.from(cachedFoodByDate![dateStr]!);
     }
 
     final db = await AppDatabase.instance.database;
@@ -82,8 +85,8 @@ class NutritionRepository {
     );
 
     final list = results.map((row) => FoodLogEntry.fromJson(row)).toList();
-    _cachedFoodByDate ??= {};
-    _cachedFoodByDate![dateStr] = list;
+    cachedFoodByDate ??= {};
+    cachedFoodByDate![dateStr] = list;
     return list;
   }
 
@@ -97,9 +100,9 @@ class NutritionRepository {
     );
 
     // Cập nhật cache ram
-    if (_cachedFoodByDate != null) {
-      for (final dateKey in _cachedFoodByDate!.keys) {
-        _cachedFoodByDate![dateKey]!.removeWhere((item) => item.id == id);
+    if (cachedFoodByDate != null) {
+      for (final dateKey in cachedFoodByDate!.keys) {
+        cachedFoodByDate![dateKey]!.removeWhere((item) => item.id == id);
       }
     }
 

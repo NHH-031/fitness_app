@@ -13,6 +13,8 @@ import 'gemini_service.dart';
 import 'locale_service.dart';
 import 'widget_sync_service.dart';
 import 'user_metrics_service.dart';
+import '../repositories/workout_repository.dart';
+import '../repositories/nutrition_repository.dart';
 
 export '../models/food_log_entry.dart';
 export '../models/daily_water_log.dart';
@@ -73,14 +75,23 @@ class StorageService {
   }
 
   // --- IN-MEMORY STRUCTURED CACHES & DAY INDEXES (TỐI ƯU HÓA TRUY VẤN O(1)) ---
-  static Map<String, List<FoodLogEntry>>? _cachedFoodByDate;
-  static Map<String, List<Map<String, dynamic>>>? _cachedWorkoutsByDate;
+  // Thống nhất 1 nguồn cache duy nhất với NutritionRepository và WorkoutRepository
+  static Map<String, List<FoodLogEntry>>? get _cachedFoodByDate =>
+      NutritionRepository.cachedFoodByDate;
+  static set _cachedFoodByDate(Map<String, List<FoodLogEntry>>? val) =>
+      NutritionRepository.cachedFoodByDate = val;
+
+  static Map<String, List<Map<String, dynamic>>>? get _cachedWorkoutsByDate =>
+      WorkoutRepository.cachedWorkoutsByDate;
+  static set _cachedWorkoutsByDate(Map<String, List<Map<String, dynamic>>>? val) =>
+      WorkoutRepository.cachedWorkoutsByDate = val;
+
   static Map<String, int>? _cachedDailyStepsMap;
 
   /// Xóa sạch bộ nhớ đệm khi đăng xuất hoặc xóa dữ liệu
   static void invalidateMemoryCaches() {
-    _cachedFoodByDate = null;
-    _cachedWorkoutsByDate = null;
+    NutritionRepository.invalidateCache();
+    WorkoutRepository.invalidateCache();
     _cachedDailyStepsMap = null;
     _lastHardwareReading = null;
     _lastReadingTime = null;
@@ -1064,13 +1075,28 @@ class StorageService {
     logs.add(newEntry);
     await prefs.setStringList(_keyWorkoutLogs, logs);
 
-    // Cập nhật trực tiếp vào Index Cache O(1)
+    // Cập nhật trực tiếp vào Index Cache O(1) (tránh trùng lặp)
     if (_cachedWorkoutsByDate != null) {
       final dateKey = getTodayDateString(time);
-      _cachedWorkoutsByDate!.putIfAbsent(dateKey, () => []).insert(0, workoutMap);
+      final list = _cachedWorkoutsByDate!.putIfAbsent(dateKey, () => []);
+      if (!list.any((m) => m['timestamp'] == workoutMap['timestamp'] && m['title'] == workoutMap['title'])) {
+        list.insert(0, workoutMap);
+      }
     }
 
     FirestoreService().saveWorkoutLog(workoutMap);
+    try {
+      await WorkoutRepository.instance.logCompletedWorkout(
+        durationMinutes: durationMinutes,
+        title: title,
+        calories: calories,
+        sets: sets,
+        reps: reps,
+        weightKg: weightKg,
+        equipment: equipment,
+        timestamp: time,
+      );
+    } catch (_) {}
     notifyWorkoutChanged();
   }
 
@@ -1358,13 +1384,19 @@ class StorageService {
     logs.add(jsonEncode(entry.toJson()));
     await prefs.setStringList(_keyFoodLogs, logs);
 
-    // Cập nhật tức thời vào Cache Index O(1)
+    // Cập nhật tức thời vào Cache Index O(1) (tránh trùng lặp)
     if (_cachedFoodByDate != null) {
       final dateKey = getTodayDateString(time);
-      _cachedFoodByDate!.putIfAbsent(dateKey, () => []).insert(0, entry);
+      final list = _cachedFoodByDate!.putIfAbsent(dateKey, () => []);
+      if (!list.any((e) => e.id == entry.id)) {
+        list.insert(0, entry);
+      }
     }
 
     FirestoreService().saveFoodLog(entry);
+    try {
+      await NutritionRepository.instance.saveFoodLog(entry);
+    } catch (_) {}
     notifyFoodChanged();
   }
 
@@ -1409,6 +1441,9 @@ class StorageService {
     }
 
     FirestoreService().deleteFoodLog(id);
+    try {
+      await NutritionRepository.instance.deleteFoodLog(id);
+    } catch (_) {}
     notifyFoodChanged();
   }
 

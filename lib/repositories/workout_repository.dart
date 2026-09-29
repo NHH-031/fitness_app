@@ -9,11 +9,11 @@ class WorkoutRepository {
   static final WorkoutRepository instance = WorkoutRepository._();
 
   // In-memory cache ngày tháng để tăng tốc render UI
-  static Map<String, List<Map<String, dynamic>>>? _cachedWorkoutsByDate;
+  static Map<String, List<Map<String, dynamic>>>? cachedWorkoutsByDate;
 
   /// Xóa sạch bộ nhớ đệm ram
   static void invalidateCache() {
-    _cachedWorkoutsByDate = null;
+    cachedWorkoutsByDate = null;
   }
 
   static String _formatDate(DateTime dt) {
@@ -57,9 +57,12 @@ class WorkoutRepository {
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
 
-    // Cập nhật in-memory cache
-    if (_cachedWorkoutsByDate != null) {
-      _cachedWorkoutsByDate!.putIfAbsent(dateStr, () => []).insert(0, workoutMap);
+    // Cập nhật in-memory cache (tránh trùng lặp)
+    if (cachedWorkoutsByDate != null) {
+      final list = cachedWorkoutsByDate!.putIfAbsent(dateStr, () => []);
+      if (!list.any((m) => m['timestamp'] == workoutMap['timestamp'] && m['title'] == workoutMap['title'])) {
+        list.insert(0, workoutMap);
+      }
     }
 
     // Đẩy lên Cloud Firestore
@@ -90,8 +93,8 @@ class WorkoutRepository {
 
   /// Lấy các bài tập theo chuỗi YYYY-MM-DD (tận dụng SQL Index)
   Future<List<Map<String, dynamic>>> getWorkoutLogsByDateStr(String dateStr) async {
-    if (_cachedWorkoutsByDate != null && _cachedWorkoutsByDate!.containsKey(dateStr)) {
-      return List.from(_cachedWorkoutsByDate![dateStr]!);
+    if (cachedWorkoutsByDate != null && cachedWorkoutsByDate!.containsKey(dateStr)) {
+      return List.from(cachedWorkoutsByDate![dateStr]!);
     }
 
     final db = await AppDatabase.instance.database;
@@ -103,8 +106,8 @@ class WorkoutRepository {
     );
 
     final list = results.map((row) => Map<String, dynamic>.from(row)).toList();
-    _cachedWorkoutsByDate ??= {};
-    _cachedWorkoutsByDate![dateStr] = list;
+    cachedWorkoutsByDate ??= {};
+    cachedWorkoutsByDate![dateStr] = list;
     return list;
   }
 
@@ -118,9 +121,9 @@ class WorkoutRepository {
     );
 
     // Cập nhật lại cache ram
-    if (_cachedWorkoutsByDate != null) {
-      for (final dateKey in _cachedWorkoutsByDate!.keys) {
-        _cachedWorkoutsByDate![dateKey]!.removeWhere((m) => m['timestamp'] == timestamp);
+    if (cachedWorkoutsByDate != null) {
+      for (final dateKey in cachedWorkoutsByDate!.keys) {
+        cachedWorkoutsByDate![dateKey]!.removeWhere((m) => m['timestamp'] == timestamp);
       }
     }
 

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -30,6 +31,7 @@ class _StepCounterWidgetState extends State<StepCounterWidget> {
   int _currentSteps = 0;
   double _userWeight = 70.0;
   double _userHeight = 175.0;
+  StreamSubscription? _stepSubscription;
 
   bool _isToday(DateTime d) {
     final now = DateTime.now();
@@ -55,6 +57,7 @@ class _StepCounterWidgetState extends State<StepCounterWidget> {
 
   @override
   void dispose() {
+    _stepSubscription?.cancel();
     StorageService.stepUpdateNotifier.removeListener(_loadSavedSteps);
     StorageService.profileUpdateNotifier.removeListener(_loadSavedSteps);
     super.dispose();
@@ -89,7 +92,8 @@ class _StepCounterWidgetState extends State<StepCounterWidget> {
       }
 
       // Lắng nghe luồng dữ liệu cảm biến phần cứng liên tục
-      eventChannel.receiveBroadcastStream().listen((dynamic event) async {
+      _stepSubscription?.cancel();
+      _stepSubscription = eventChannel.receiveBroadcastStream().listen((dynamic event) async {
         if (event is int) {
           // Tính toán và lưu trữ mốc bước chân ngày mới (kể cả khi đã tắt app)
           final calculated = await StorageService.processHardwareSteps(event);

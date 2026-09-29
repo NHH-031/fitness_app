@@ -246,6 +246,9 @@ class AnatomyKinematicPainter extends CustomPainter {
       case AnatomyExerciseType.mountainClimber:
         // Đạp gối luân phiên liên tục dạng sóng sin điều hòa
         return 0.5 - 0.5 * math.cos(t * math.pi * 2);
+      case AnatomyExerciseType.burpee:
+        // Chuỗi 4 chuyển động tuần tự Burpee (0.0 -> 1.0)
+        return t;
       case AnatomyExerciseType.jumpingJack:
         // Nhảy mở rộng và khép lại mượt mà
         return 0.5 - 0.5 * math.cos(t * math.pi * 2);
@@ -344,6 +347,9 @@ class AnatomyKinematicPainter extends CustomPainter {
     // 1. Vẽ nền sàn ba chiều / Holographic Floor & Equipment
     _drawEnvironment(canvas, size, joints, type);
 
+    // 1.5 Vẽ vệt quỹ đạo chuyển động mờ (Motion Trails / Trajectory Line)
+    _drawMotionTrails(canvas, size, joints, type);
+
     // 2. Vẽ mô hình cơ bắp giải phẫu đa tầng
     if (viewMode == KinematicViewMode.side) {
       _paintSideAnatomy(canvas, size, joints, type);
@@ -369,7 +375,7 @@ class AnatomyKinematicPainter extends CustomPainter {
     final w = size.width;
     final h = size.height;
     final cx = w * 0.5;
-    final groundY = h * 0.82;
+    final groundY = h * 0.79;
     final p = progress.clamp(0.0, 1.0);
 
     if (viewMode == KinematicViewMode.front) {
@@ -1006,53 +1012,224 @@ class AnatomyKinematicPainter extends CustomPainter {
         );
 
       case AnatomyExerciseType.mountainClimber:
-        final alt = math.sin(p * math.pi * 2);
-        final kneeDriveX = cx + 4.0 + (16.0 * alt.abs());
-        final kneeDriveY = groundY - 18.0;
+        // Đạp gối so le 2 chân liên tục lệch pha 180 độ (pi)
+        // Khi chân gần co về trước sát ngực (driveNear -> 1.0), chân xa duỗi thẳng ra sau (driveFar -> 0.0)
+        final driveNear = p;
+        final driveFar = 1.0 - p;
+
+        // Nhịp nhún vi mô tự nhiên của hông và cột sống khi chạy trong tư thế Plank
+        final hipBounce = math.sin(p * math.pi * 2) * 1.5;
+
+        // Chân gần (Near leg): co đạp liên tục giữa duỗi sau và co ngực
+        final kneeNear = Offset.lerp(
+          Offset(cx - 24, groundY - 10),
+          Offset(cx + 10, groundY - 18),
+          driveNear,
+        )!;
+        final ankleNear = Offset.lerp(
+          Offset(cx - 42, groundY - 3),
+          Offset(cx - 2, groundY - 6),
+          driveNear,
+        )!;
+        final footNear = Offset.lerp(
+          Offset(cx - 44, groundY),
+          Offset(cx, groundY - 4),
+          driveNear,
+        )!;
+
+        // Chân xa (Far leg): lệch pha 180 độ đối nghịch hoàn toàn với chân gần
+        final kneeFar = Offset.lerp(
+          Offset(cx - 22, groundY - 12),
+          Offset(cx + 12, groundY - 20),
+          driveFar,
+        )!;
+        final ankleFar = Offset.lerp(
+          Offset(cx - 40, groundY - 5),
+          Offset(cx, groundY - 8),
+          driveFar,
+        )!;
+        final footFar = Offset.lerp(
+          Offset(cx - 42, groundY - 2),
+          Offset(cx + 2, groundY - 6),
+          driveFar,
+        )!;
 
         return AnatomyKinematicJoints(
-          head: Offset(cx + 36, groundY - 34),
-          neck: Offset(cx + 28, groundY - 30),
+          head: Offset(cx + 36, groundY - 34 + hipBounce * 0.5),
+          neck: Offset(cx + 28, groundY - 30 + hipBounce * 0.5),
           shoulderNear: Offset(cx + 22, groundY - 28),
           shoulderFar: Offset(cx + 26, groundY - 30),
           elbowNear: Offset(cx + 22, groundY - 14),
           elbowFar: Offset(cx + 26, groundY - 14),
           wristNear: Offset(cx + 22, groundY),
           wristFar: Offset(cx + 26, groundY),
-          chest: Offset(cx + 10, groundY - 26),
-          midSpine: Offset(cx, groundY - 24),
-          hipNear: Offset(cx - 10, groundY - 22),
-          hipFar: Offset(cx - 8, groundY - 24),
-          kneeNear: Offset(kneeDriveX, kneeDriveY),
-          kneeFar: Offset(cx - 24, groundY - 10),
-          ankleNear: Offset(kneeDriveX - 8, groundY - 4),
-          ankleFar: Offset(cx - 42, groundY),
-          footNear: Offset(kneeDriveX - 4, groundY),
-          footFar: Offset(cx - 44, groundY),
+          chest: Offset(cx + 10, groundY - 26 + hipBounce * 0.7),
+          midSpine: Offset(cx, groundY - 24 + hipBounce * 0.9),
+          hipNear: Offset(cx - 10, groundY - 22 + hipBounce),
+          hipFar: Offset(cx - 8, groundY - 24 + hipBounce),
+          kneeNear: kneeNear,
+          kneeFar: kneeFar,
+          ankleNear: ankleNear,
+          ankleFar: ankleFar,
+          footNear: footNear,
+          footFar: footFar,
           viewMode: KinematicViewMode.side,
         );
 
       case AnatomyExerciseType.burpee:
-        final bodyY = (h * 0.35) + ((groundY - 16.0 - (h * 0.35)) * p);
+        // Burpee 4 pha chuyển động thể hình tiêu chuẩn:
+        // Pha 1 (0.0 -> 0.25): Đứng thẳng -> Ngồi xổm hạ trọng tâm chống 2 tay xuống sàn (Squat Drop)
+        // Pha 2 (0.25 -> 0.50): Bật 2 chân ra sau duỗi thẳng thành Plank (Thrust to Plank)
+        // Pha 3 (0.50 -> 0.75): Bật thu 2 chân về dưới ngực (Tuck back to Squat)
+        // Pha 4 (0.75 -> 1.00): Bật nhảy vươn thẳng 2 tay lên trần nhà và tiếp đất mềm (Vertical Jump & Land)
+
+        // Các mốc tư thế cơ sở (Keyframes)
+        final standHead = Offset(cx + 4, h * 0.22);
+        final standNeck = Offset(cx + 4, h * 0.30);
+        final standShoulder = Offset(cx + 4, h * 0.36);
+        final standElbow = Offset(cx + 6, h * 0.49);
+        final standWrist = Offset(cx + 6, h * 0.62);
+        final standChest = Offset(cx + 4, h * 0.42);
+        final standSpine = Offset(cx + 2, h * 0.49);
+        final standHip = Offset(cx, h * 0.57);
+        final standKnee = Offset(cx + 2, h * 0.73);
+        final standAnkle = Offset(cx, groundY - 2);
+        final standFoot = Offset(cx + 4, groundY);
+
+        final crouchHead = Offset(cx + 24, groundY - 30);
+        final crouchNeck = Offset(cx + 18, groundY - 27);
+        final crouchShoulder = Offset(cx + 14, groundY - 24);
+        final crouchElbow = Offset(cx + 16, groundY - 12);
+        final crouchWrist = Offset(cx + 18, groundY);
+        final crouchChest = Offset(cx + 10, groundY - 22);
+        final crouchSpine = Offset(cx + 2, groundY - 20);
+        final crouchHip = Offset(cx - 10, groundY - 18);
+        final crouchKnee = Offset(cx + 6, groundY - 14);
+        final crouchAnkle = Offset(cx - 6, groundY - 3);
+        final crouchFoot = Offset(cx - 2, groundY);
+
+        final plankHead = Offset(cx + 34, groundY - 32);
+        final plankNeck = Offset(cx + 26, groundY - 29);
+        final plankShoulder = Offset(cx + 18, groundY - 26);
+        final plankElbow = Offset(cx + 18, groundY - 13);
+        final plankWrist = Offset(cx + 18, groundY);
+        final plankChest = Offset(cx + 8, groundY - 24);
+        final plankSpine = Offset(cx - 2, groundY - 22);
+        final plankHip = Offset(cx - 12, groundY - 20);
+        final plankKnee = Offset(cx - 28, groundY - 11);
+        final plankAnkle = Offset(cx - 44, groundY - 3);
+        final plankFoot = Offset(cx - 46, groundY);
+
+        Offset curHead, curNeck, curShoulder, curElbow, curWrist, curChest, curSpine, curHip, curKnee, curAnkle, curFoot;
+
+        if (p < 0.25) {
+          final t = p / 0.25;
+          final sT = t * t * (3.0 - 2.0 * t);
+          curHead = Offset.lerp(standHead, crouchHead, sT)!;
+          curNeck = Offset.lerp(standNeck, crouchNeck, sT)!;
+          curShoulder = Offset.lerp(standShoulder, crouchShoulder, sT)!;
+          curElbow = Offset.lerp(standElbow, crouchElbow, sT)!;
+          curWrist = Offset.lerp(standWrist, crouchWrist, sT)!;
+          curChest = Offset.lerp(standChest, crouchChest, sT)!;
+          curSpine = Offset.lerp(standSpine, crouchSpine, sT)!;
+          curHip = Offset.lerp(standHip, crouchHip, sT)!;
+          curKnee = Offset.lerp(standKnee, crouchKnee, sT)!;
+          curAnkle = Offset.lerp(standAnkle, crouchAnkle, sT)!;
+          curFoot = Offset.lerp(standFoot, crouchFoot, sT)!;
+        } else if (p < 0.50) {
+          final t = (p - 0.25) / 0.25;
+          final sT = t * t * (3.0 - 2.0 * t);
+          curHead = Offset.lerp(crouchHead, plankHead, sT)!;
+          curNeck = Offset.lerp(crouchNeck, plankNeck, sT)!;
+          curShoulder = Offset.lerp(crouchShoulder, plankShoulder, sT)!;
+          curElbow = Offset.lerp(crouchElbow, plankElbow, sT)!;
+          curWrist = Offset.lerp(crouchWrist, plankWrist, sT)!;
+          curChest = Offset.lerp(crouchChest, plankChest, sT)!;
+          curSpine = Offset.lerp(crouchSpine, plankSpine, sT)!;
+          curHip = Offset.lerp(crouchHip, plankHip, sT)!;
+          curKnee = Offset.lerp(crouchKnee, plankKnee, sT)!;
+          curAnkle = Offset.lerp(crouchAnkle, plankAnkle, sT)!;
+          curFoot = Offset.lerp(crouchFoot, plankFoot, sT)!;
+        } else if (p < 0.75) {
+          final t = (p - 0.50) / 0.25;
+          final sT = t * t * (3.0 - 2.0 * t);
+          curHead = Offset.lerp(plankHead, crouchHead, sT)!;
+          curNeck = Offset.lerp(plankNeck, crouchNeck, sT)!;
+          curShoulder = Offset.lerp(plankShoulder, crouchShoulder, sT)!;
+          curElbow = Offset.lerp(plankElbow, crouchElbow, sT)!;
+          curWrist = Offset.lerp(plankWrist, crouchWrist, sT)!;
+          curChest = Offset.lerp(plankChest, crouchChest, sT)!;
+          curSpine = Offset.lerp(plankSpine, crouchSpine, sT)!;
+          curHip = Offset.lerp(plankHip, crouchHip, sT)!;
+          curKnee = Offset.lerp(plankKnee, crouchKnee, sT)!;
+          curAnkle = Offset.lerp(plankAnkle, crouchAnkle, sT)!;
+          curFoot = Offset.lerp(plankFoot, crouchFoot, sT)!;
+        } else {
+          final t = (p - 0.75) / 0.25;
+          final jumpHeight = math.sin(t * math.pi) * 28.0;
+
+          final jumpHead = Offset(cx + 4, h * 0.16);
+          final jumpNeck = Offset(cx + 4, h * 0.23);
+          final jumpShoulder = Offset(cx + 4, h * 0.28);
+          final jumpElbow = Offset(cx + 6, h * 0.18);
+          final jumpWrist = Offset(cx + 6, h * 0.08);
+          final jumpChest = Offset(cx + 4, h * 0.33);
+          final jumpSpine = Offset(cx + 2, h * 0.40);
+          final jumpHip = Offset(cx, h * 0.48);
+          final jumpKnee = Offset(cx + 2, h * 0.63);
+          final jumpAnkle = Offset(cx, groundY - 14);
+          final jumpFoot = Offset(cx + 4, groundY - 12);
+
+          if (t < 0.5) {
+            final sT = (t / 0.5);
+            final smoothT = sT * sT * (3.0 - 2.0 * sT);
+            curHead = Offset.lerp(crouchHead, jumpHead, smoothT)! - Offset(0, jumpHeight);
+            curNeck = Offset.lerp(crouchNeck, jumpNeck, smoothT)! - Offset(0, jumpHeight);
+            curShoulder = Offset.lerp(crouchShoulder, jumpShoulder, smoothT)! - Offset(0, jumpHeight);
+            curElbow = Offset.lerp(crouchElbow, jumpElbow, smoothT)! - Offset(0, jumpHeight);
+            curWrist = Offset.lerp(crouchWrist, jumpWrist, smoothT)! - Offset(0, jumpHeight);
+            curChest = Offset.lerp(crouchChest, jumpChest, smoothT)! - Offset(0, jumpHeight);
+            curSpine = Offset.lerp(crouchSpine, jumpSpine, smoothT)! - Offset(0, jumpHeight);
+            curHip = Offset.lerp(crouchHip, jumpHip, smoothT)! - Offset(0, jumpHeight);
+            curKnee = Offset.lerp(crouchKnee, jumpKnee, smoothT)! - Offset(0, jumpHeight);
+            curAnkle = Offset.lerp(crouchAnkle, jumpAnkle, smoothT)! - Offset(0, jumpHeight);
+            curFoot = Offset.lerp(crouchFoot, jumpFoot, smoothT)! - Offset(0, jumpHeight);
+          } else {
+            final sT = (t - 0.5) / 0.5;
+            final smoothT = sT * sT * (3.0 - 2.0 * sT);
+            curHead = Offset.lerp(jumpHead, standHead, smoothT)! - Offset(0, jumpHeight);
+            curNeck = Offset.lerp(jumpNeck, standNeck, smoothT)! - Offset(0, jumpHeight);
+            curShoulder = Offset.lerp(jumpShoulder, standShoulder, smoothT)! - Offset(0, jumpHeight);
+            curElbow = Offset.lerp(jumpElbow, standElbow, smoothT)! - Offset(0, jumpHeight);
+            curWrist = Offset.lerp(jumpWrist, standWrist, smoothT)! - Offset(0, jumpHeight);
+            curChest = Offset.lerp(jumpChest, standChest, smoothT)! - Offset(0, jumpHeight);
+            curSpine = Offset.lerp(jumpSpine, standSpine, smoothT)! - Offset(0, jumpHeight);
+            curHip = Offset.lerp(jumpHip, standHip, smoothT)! - Offset(0, jumpHeight);
+            curKnee = Offset.lerp(jumpKnee, standKnee, smoothT)! - Offset(0, jumpHeight);
+            curAnkle = Offset.lerp(jumpAnkle, standAnkle, smoothT)! - Offset(0, jumpHeight);
+            curFoot = Offset.lerp(jumpFoot, standFoot, smoothT)! - Offset(0, jumpHeight);
+          }
+        }
+
         return AnatomyKinematicJoints(
-          head: Offset(cx + 12, bodyY - 14),
-          neck: Offset(cx + 6, bodyY - 6),
-          shoulderNear: Offset(cx, bodyY),
-          shoulderFar: Offset(cx + 4, bodyY - 2),
-          elbowNear: Offset(cx + 8, bodyY + 14),
-          elbowFar: Offset(cx + 12, bodyY + 12),
-          wristNear: Offset(cx + 12, bodyY + 28),
-          wristFar: Offset(cx + 16, bodyY + 26),
-          chest: Offset(cx + 4, bodyY + 8),
-          midSpine: Offset(cx - 6, bodyY + 14),
-          hipNear: Offset(cx - 14, bodyY + 20),
-          hipFar: Offset(cx - 10, bodyY + 18),
-          kneeNear: Offset(cx - 4, (bodyY + groundY) * 0.5),
-          kneeFar: Offset(cx, (bodyY + groundY) * 0.5),
-          ankleNear: Offset(cx - 8, groundY),
-          ankleFar: Offset(cx - 4, groundY),
-          footNear: Offset(cx + 2, groundY),
-          footFar: Offset(cx + 6, groundY),
+          head: curHead,
+          neck: curNeck,
+          shoulderNear: curShoulder,
+          shoulderFar: curShoulder + const Offset(4, -2),
+          elbowNear: curElbow,
+          elbowFar: curElbow + const Offset(4, -2),
+          wristNear: curWrist,
+          wristFar: curWrist + const Offset(4, -2),
+          chest: curChest,
+          midSpine: curSpine,
+          hipNear: curHip,
+          hipFar: curHip + const Offset(4, -2),
+          kneeNear: curKnee,
+          kneeFar: curKnee + const Offset(4, -2),
+          ankleNear: curAnkle,
+          ankleFar: curAnkle + const Offset(4, -2),
+          footNear: curFoot,
+          footFar: curFoot + const Offset(4, -2),
           viewMode: KinematicViewMode.side,
         );
 
@@ -1636,7 +1813,7 @@ class AnatomyKinematicPainter extends CustomPainter {
     AnatomyKinematicJoints joints,
     AnatomyExerciseType type,
   ) {
-    final groundY = size.height * 0.82;
+    final groundY = size.height * 0.79;
 
     // Sàn lưới Holographic Grid
     final floorLinePaint = Paint()
@@ -1728,6 +1905,167 @@ class AnatomyKinematicPainter extends CustomPainter {
     canvas.drawRRect(plate2, platePaint);
     canvas.drawRRect(plate1, plateRing);
     canvas.drawRRect(plate2, plateRing);
+  }
+
+  // ==========================================
+  // VỆT QUỸ ĐẠO CHUYỂN ĐỘNG MỜ (MOTION TRAILS / TRAJECTORY)
+  // ==========================================
+  void _drawMotionTrails(
+    Canvas canvas,
+    Size size,
+    AnatomyKinematicJoints joints,
+    AnatomyExerciseType type,
+  ) {
+    final w = size.width;
+    final h = size.height;
+    final cx = w * 0.5;
+    final groundY = h * 0.79;
+
+    final trailColor = themeColor.withValues(alpha: 0.60);
+    final glowColor = themeColor.withValues(alpha: 0.22);
+
+    final glowPaint = Paint()
+      ..color = glowColor
+      ..strokeWidth = 3.5
+      ..style = PaintingStyle.stroke
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5);
+
+    final dashPaint = Paint()
+      ..color = trailColor
+      ..strokeWidth = 1.4
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+
+    final markerFill = Paint()
+      ..color = themeColor
+      ..style = PaintingStyle.fill;
+    final markerGlow = Paint()
+      ..color = themeColor.withValues(alpha: 0.5)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5);
+
+    final List<Path> paths = [];
+    final List<Offset> currentPoints = [];
+
+    switch (type) {
+      case AnatomyExerciseType.bicepCurl:
+        // Cung đường cuốn tạ vòng cung quanh khớp khuỷu tay
+        final elbowY = h * 0.52;
+        final elbowXLeft = cx - 20.0;
+        final elbowXRight = cx + 20.0;
+        final forearmLength = h * 0.22;
+
+        final pathLeft = Path();
+        final pathRight = Path();
+        for (int i = 0; i <= 20; i++) {
+          final t = i / 20.0;
+          final angle = 0.15 + (1.75 * t);
+          final pXLeft = elbowXLeft + (forearmLength * 0.55 * math.sin(angle));
+          final pYLeft = elbowY + (forearmLength * math.cos(angle));
+          final pXRight = elbowXRight - (forearmLength * 0.55 * math.sin(angle));
+          final pYRight = elbowY + (forearmLength * math.cos(angle));
+          if (i == 0) {
+            pathLeft.moveTo(pXLeft, pYLeft);
+            pathRight.moveTo(pXRight, pYRight);
+          } else {
+            pathLeft.lineTo(pXLeft, pYLeft);
+            pathRight.lineTo(pXRight, pYRight);
+          }
+        }
+        paths.addAll([pathLeft, pathRight]);
+        if (joints.dumbbellNear != null) currentPoints.add(joints.dumbbellNear!);
+        if (joints.dumbbellFar != null) currentPoints.add(joints.dumbbellFar!);
+        break;
+
+      case AnatomyExerciseType.lateralRaise:
+        // Cung đường dang tạ vòng cung từ hông ra hai bên vai
+        final shoulderY = h * 0.38;
+        final armLength = h * 0.26;
+        final pathLeft = Path();
+        final pathRight = Path();
+        for (int i = 0; i <= 20; i++) {
+          final t = i / 20.0;
+          final angle = (math.pi * 0.5) * (1.0 - t);
+          final pXLeft = (cx - 24) - (armLength * math.cos(angle));
+          final pYLeft = shoulderY + (armLength * math.sin(angle));
+          final pXRight = (cx + 24) + (armLength * math.cos(angle));
+          final pYRight = shoulderY + (armLength * math.sin(angle));
+          if (i == 0) {
+            pathLeft.moveTo(pXLeft, pYLeft);
+            pathRight.moveTo(pXRight, pYRight);
+          } else {
+            pathLeft.lineTo(pXLeft, pYLeft);
+            pathRight.lineTo(pXRight, pYRight);
+          }
+        }
+        paths.addAll([pathLeft, pathRight]);
+        if (joints.dumbbellNear != null) currentPoints.add(joints.dumbbellNear!);
+        if (joints.dumbbellFar != null) currentPoints.add(joints.dumbbellFar!);
+        break;
+
+      case AnatomyExerciseType.shoulderPress:
+        // Quỹ đạo đẩy tạ thẳng đứng qua đầu
+        final pathLeft = Path()
+          ..moveTo(cx - 28, h * 0.33)
+          ..lineTo(cx - 14, h * 0.16);
+        final pathRight = Path()
+          ..moveTo(cx + 28, h * 0.33)
+          ..lineTo(cx + 14, h * 0.16);
+        paths.addAll([pathLeft, pathRight]);
+        if (joints.dumbbellNear != null) currentPoints.add(joints.dumbbellNear!);
+        if (joints.dumbbellFar != null) currentPoints.add(joints.dumbbellFar!);
+        break;
+
+      case AnatomyExerciseType.squat:
+        // Quỹ đạo đường Bar Path thẳng đứng chuẩn vật lý trên vai/lưng
+        final squatPath = Path()
+          ..moveTo(cx - 6, h * 0.40)
+          ..lineTo(cx - 6, h * 0.54);
+        paths.add(squatPath);
+        currentPoints.add(joints.shoulderNear);
+        break;
+
+      case AnatomyExerciseType.benchPress:
+        // Quỹ đạo tạ đẩy ngực thẳng đứng chuẩn an toàn
+        final benchPath = Path()
+          ..moveTo(cx - 6, groundY - 32)
+          ..lineTo(cx - 6, groundY - 56);
+        paths.add(benchPath);
+        if (joints.dumbbellNear != null) currentPoints.add(joints.dumbbellNear!);
+        break;
+
+      default:
+        return;
+    }
+
+    // Vẽ cung đường phát sáng và nét đứt
+    for (final p in paths) {
+      canvas.drawPath(p, glowPaint);
+      _drawDashedPath(canvas, p, dashPaint, dashWidth: 4.5, dashSpace: 3.5);
+    }
+
+    // Điểm chỉ báo vị trí tạ / mốc khớp hiện tại
+    for (final pt in currentPoints) {
+      canvas.drawCircle(pt, 5.0, markerGlow);
+      canvas.drawCircle(pt, 2.5, markerFill);
+    }
+  }
+
+  void _drawDashedPath(
+    Canvas canvas,
+    Path path,
+    Paint paint, {
+    double dashWidth = 5.0,
+    double dashSpace = 4.0,
+  }) {
+    for (final metric in path.computeMetrics()) {
+      double distance = 0.0;
+      while (distance < metric.length) {
+        final extractLength = math.min(dashWidth, metric.length - distance);
+        final subPath = metric.extractPath(distance, distance + extractLength);
+        canvas.drawPath(subPath, paint);
+        distance += dashWidth + dashSpace;
+      }
+    }
   }
 
   // ==========================================

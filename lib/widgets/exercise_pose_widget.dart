@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../theme.dart';
 import '../services/locale_service.dart';
@@ -661,7 +662,7 @@ class ExerciseGuideData {
   }
 }
 
-/// Widget hoạt ảnh chuyển động mô phỏng động tác giải phẫu 100% Offline mượt mà
+/// Widget hoạt ảnh chuyển động mô phỏng động tác giải phẫu 100% Offline mượt mà với thanh điều khiển tương tác
 class ExercisePoseAnimator extends StatefulWidget {
   final String exerciseTitle;
   final bool isPlaying;
@@ -672,7 +673,7 @@ class ExercisePoseAnimator extends StatefulWidget {
     super.key,
     required this.exerciseTitle,
     this.isPlaying = true,
-    this.height = 150,
+    this.height = 168,
     this.isMale = true,
   });
 
@@ -683,6 +684,8 @@ class ExercisePoseAnimator extends StatefulWidget {
 class _ExercisePoseAnimatorState extends State<ExercisePoseAnimator>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
+  bool _isPaused = false;
+  double _speed = 1.0;
 
   @override
   void initState() {
@@ -696,11 +699,46 @@ class _ExercisePoseAnimatorState extends State<ExercisePoseAnimator>
     }
   }
 
+  void _togglePlayPause() {
+    setState(() {
+      _isPaused = !_isPaused;
+      if (_isPaused) {
+        _controller.stop();
+      } else {
+        _controller.repeat();
+      }
+    });
+  }
+
+  void _cycleSpeed() {
+    setState(() {
+      if (_speed == 1.0) {
+        _speed = 0.5;
+      } else if (_speed == 0.5) {
+        _speed = 1.5;
+      } else {
+        _speed = 1.0;
+      }
+      _controller.duration = Duration(milliseconds: (2700 / _speed).round());
+      if (!_isPaused && widget.isPlaying) {
+        _controller.repeat();
+      }
+    });
+  }
+
+  void _onScrub(double value) {
+    setState(() {
+      _isPaused = true;
+      _controller.stop();
+      _controller.value = value;
+    });
+  }
+
   @override
   void didUpdateWidget(covariant ExercisePoseAnimator oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.isPlaying != oldWidget.isPlaying) {
-      if (widget.isPlaying) {
+      if (widget.isPlaying && !_isPaused) {
         _controller.repeat();
       } else {
         _controller.stop();
@@ -720,6 +758,7 @@ class _ExercisePoseAnimatorState extends State<ExercisePoseAnimator>
         ? const Color(0xFF00F0FF)
         : const Color(0xFFFF2E93);
     final exType = AnatomyKinematicPainter.resolveExerciseType(widget.exerciseTitle);
+    final effectiveHeight = math.max(widget.height, 168.0);
 
     return AnimatedBuilder(
       animation: _controller,
@@ -730,7 +769,7 @@ class _ExercisePoseAnimatorState extends State<ExercisePoseAnimator>
         );
 
         return Container(
-          height: widget.height,
+          height: effectiveHeight,
           width: double.infinity,
           decoration: BoxDecoration(
             color: const Color(0xFF0C101A),
@@ -761,6 +800,7 @@ class _ExercisePoseAnimatorState extends State<ExercisePoseAnimator>
                     ),
                   ),
                 ),
+
                 // Gender badge in top left
                 Positioned(
                   top: 10,
@@ -787,6 +827,91 @@ class _ExercisePoseAnimatorState extends State<ExercisePoseAnimator>
                             color: activeThemeColor,
                             fontSize: 9.5,
                             fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                // Interactive Playback Controls Overlay at Bottom
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  child: Container(
+                    height: 32,
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xF2080D18),
+                      border: Border(
+                        top: BorderSide(
+                          color: activeThemeColor.withValues(alpha: 0.18),
+                          width: 0.8,
+                        ),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        // Nút Tạm dừng / Tiếp tục (Play/Pause)
+                        GestureDetector(
+                          onTap: _togglePlayPause,
+                          behavior: HitTestBehavior.opaque,
+                          child: Container(
+                            width: 26,
+                            height: 26,
+                            alignment: Alignment.center,
+                            child: Icon(
+                              _isPaused ? Icons.play_arrow_rounded : Icons.pause_rounded,
+                              size: 19,
+                              color: activeThemeColor,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+
+                        // Thanh kéo Scrubber Slider để soi kỹ góc uốn khớp động tác
+                        Expanded(
+                          child: SliderTheme(
+                            data: SliderThemeData(
+                              trackHeight: 2.5,
+                              thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 5.0),
+                              overlayShape: const RoundSliderOverlayShape(overlayRadius: 9),
+                              activeTrackColor: activeThemeColor,
+                              inactiveTrackColor: Colors.white24,
+                              thumbColor: Colors.white,
+                            ),
+                            child: Slider(
+                              value: _controller.value.clamp(0.0, 1.0),
+                              onChanged: _onScrub,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+
+                        // Nút chỉnh tốc độ 0.5x / 1.0x / 1.5x
+                        GestureDetector(
+                          onTap: _cycleSpeed,
+                          behavior: HitTestBehavior.opaque,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2.5),
+                            decoration: BoxDecoration(
+                              color: activeThemeColor.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(
+                                color: activeThemeColor.withValues(alpha: 0.35),
+                                width: 0.8,
+                              ),
+                            ),
+                            child: Text(
+                              _speed == 1.0 ? '1.0×' : (_speed == 0.5 ? '0.5×' : '1.5×'),
+                              style: TextStyle(
+                                color: activeThemeColor,
+                                fontSize: 9.5,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 0.2,
+                              ),
+                            ),
                           ),
                         ),
                       ],

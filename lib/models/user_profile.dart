@@ -1,4 +1,5 @@
 import '../services/locale_service.dart';
+import '../services/user_metrics_service.dart';
 
 class UserProfile {
   final String name;
@@ -39,28 +40,10 @@ class UserProfile {
   }
 
   /// Body Mass Index (BMI) = weight (kg) / (height (m))^2
-  double get bmi {
-    if (height <= 0) return 0.0;
-    final heightInMeters = height / 100.0;
-    final value = weight / (heightInMeters * heightInMeters);
-    return double.parse(value.toStringAsFixed(1));
-  }
+  double get bmi => UserMetricsService.calculateBmi(weightKg: weight, heightCm: height);
 
   /// BMI Health Category Classification
-  String get bmiCategory {
-    final b = bmi;
-    if (LocaleService.isVietnamese) {
-      if (b < 18.5) return 'Thiếu cân';
-      if (b < 24.9) return 'Bình thường';
-      if (b < 29.9) return 'Thừa cân';
-      return 'Béo phì';
-    } else {
-      if (b < 18.5) return 'Underweight';
-      if (b < 24.9) return 'Normal';
-      if (b < 29.9) return 'Overweight';
-      return 'Obese';
-    }
-  }
+  String get bmiCategory => UserMetricsService.getBmiCategory(bmi);
 
   String get goalDisplayName {
     if (LocaleService.isVietnamese) {
@@ -91,38 +74,24 @@ class UserProfile {
   }
 
   /// Basal Metabolic Rate (BMR) calculated via Mifflin-St Jeor Equation
-  /// Men:   10 * weight (kg) + 6.25 * height (cm) - 5 * age + 5
-  /// Women: 10 * weight (kg) + 6.25 * height (cm) - 5 * age - 161
-  double get bmr {
-    final base = (10 * weight) + (6.25 * height) - (5 * age);
-    if (gender.toLowerCase() == 'female') {
-      return (base - 161).clamp(800.0, 3500.0);
-    }
-    return (base + 5).clamp(900.0, 4000.0);
-  }
+  double get bmr => UserMetricsService.calculateBmr(
+        weightKg: weight,
+        heightCm: height,
+        age: age,
+        gender: gender,
+      );
 
   /// Total Daily Energy Expenditure (TDEE) = BMR * Activity Multiplier
-  double get tdee {
-    return bmr * activityLevel;
-  }
+  double get tdee => UserMetricsService.calculateTdee(
+        bmr: bmr,
+        activityLevel: activityLevel,
+      );
 
   /// Dynamic Daily Calorie Target based on fitness goal
-  int get targetCalories {
-    switch (fitnessGoal) {
-      case 'cutting':
-        // Safe caloric deficit of ~450 kcal
-        return (tdee - 450).round().clamp(1200, 4500);
-      case 'bulking':
-        // Clean surplus of ~350 kcal
-        return (tdee + 350).round().clamp(1500, 5000);
-      case 'endurance':
-        // Slight surplus for glycogen recovery
-        return (tdee + 150).round().clamp(1400, 4800);
-      case 'balanced':
-      default:
-        return tdee.round().clamp(1300, 4500);
-    }
-  }
+  int get targetCalories => UserMetricsService.calculateTargetCalories(
+        tdee: tdee,
+        fitnessGoal: fitnessGoal,
+      );
 
   /// Dynamic Daily Macro Split based on bodyweight and fitness goal:
   /// - Protein: 1.8g - 2.2g per kg bodyweight
