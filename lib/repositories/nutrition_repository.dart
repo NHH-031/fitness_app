@@ -1,5 +1,6 @@
 import 'package:sqflite/sqflite.dart';
 import '../database/app_database.dart';
+import '../models/favorite_food.dart';
 import '../models/food_log_entry.dart';
 import '../services/firestore_service.dart';
 
@@ -181,6 +182,67 @@ class NutritionRepository {
   Future<void> clearAll() async {
     final db = await AppDatabase.instance.database;
     await db.delete('food_entries');
+    await db.delete('favorite_foods');
     invalidateCache();
   }
+
+  // ==========================================
+  // PHIÊN BẢN 2.0: MÓN ĂN YÊU THÍCH (FAVORITES)
+  // ==========================================
+
+  /// Lấy danh sách toàn bộ món ăn ưa thích
+  Future<List<FavoriteFood>> getFavoriteFoods() async {
+    final db = await AppDatabase.instance.database;
+    final results = await db.query(
+      'favorite_foods',
+      orderBy: 'created_at DESC',
+    );
+    return results.map((row) => FavoriteFood.fromMap(row)).toList();
+  }
+
+  /// Thêm một món ăn vào danh mục ưa thích
+  Future<void> addFavoriteFood(FavoriteFood food) async {
+    final db = await AppDatabase.instance.database;
+    await db.insert(
+      'favorite_foods',
+      food.toMap(),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  /// Xóa một món ăn khỏi danh mục ưa thích
+  Future<void> deleteFavoriteFood(String id) async {
+    final db = await AppDatabase.instance.database;
+    await db.delete(
+      'favorite_foods',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  /// Kiểm tra xem món ăn theo tên đã có trong mục ưa thích chưa
+  Future<bool> isFoodFavorite(String name) async {
+    final db = await AppDatabase.instance.database;
+    final results = await db.query(
+      'favorite_foods',
+      where: 'LOWER(name) = ?',
+      whereArgs: [name.trim().toLowerCase()],
+      limit: 1,
+    );
+    return results.isNotEmpty;
+  }
+
+  /// Lấy món ăn ưa thích theo tên
+  Future<FavoriteFood?> getFavoriteFoodByName(String name) async {
+    final db = await AppDatabase.instance.database;
+    final results = await db.query(
+      'favorite_foods',
+      where: 'LOWER(name) = ?',
+      whereArgs: [name.trim().toLowerCase()],
+      limit: 1,
+    );
+    if (results.isEmpty) return null;
+    return FavoriteFood.fromMap(results.first);
+  }
 }
+

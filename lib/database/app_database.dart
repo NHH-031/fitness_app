@@ -48,7 +48,10 @@ class AppDatabase {
       return await databaseFactory.openDatabase(inMemoryDatabasePath,
           options: OpenDatabaseOptions(
             version: 1,
-            onCreate: _onCreate,
+            onCreate: (db, v) async {
+              await _onCreate(db, v);
+              await _createV2Tables(db);
+            },
           ));
     } else {
       final databasesPath = await getDatabasesPath();
@@ -58,8 +61,12 @@ class AppDatabase {
     final db = await openDatabase(
       dbPath,
       version: 1,
-      onCreate: _onCreate,
+      onCreate: (db, v) async {
+        await _onCreate(db, v);
+        await _createV2Tables(db);
+      },
       onOpen: (db) async {
+        await _createV2Tables(db);
         // Tự động kiểm tra và di chuyển dữ liệu cũ từ SharedPreferences sang SQLite
         await _migrateFromSharedPreferences(db);
       },
@@ -236,6 +243,58 @@ class AppDatabase {
     }
   }
 
+  /// Khởi tạo các bảng mở rộng cho Fitness Tracker v2.0
+  static Future<void> _createV2Tables(Database db) async {
+    // 5. Bảng món ăn yêu thích (FavoriteFood) - Giai đoạn 1
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS favorite_foods (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        calories INTEGER NOT NULL,
+        protein INTEGER NOT NULL,
+        carbs INTEGER NOT NULL,
+        fat INTEGER NOT NULL,
+        serving_size TEXT,
+        image_path TEXT,
+        created_at TEXT NOT NULL
+      )
+    ''');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_fav_food_name ON favorite_foods (name)');
+
+    // 6. Bảng theo dõi số đo cơ thể & body fat - Giai đoạn 4
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS body_measurements (
+        id TEXT PRIMARY KEY,
+        date TEXT NOT NULL,
+        weight REAL,
+        neck_cm REAL,
+        chest_cm REAL,
+        waist_cm REAL,
+        hips_cm REAL,
+        bicep_cm REAL,
+        thigh_cm REAL,
+        body_fat_percent REAL,
+        notes TEXT,
+        created_at TEXT NOT NULL
+      )
+    ''');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_body_meas_date ON body_measurements (date)');
+
+    // 7. Bảng hình ảnh tiến trình before/after - Giai đoạn 4
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS progress_photos (
+        id TEXT PRIMARY KEY,
+        date TEXT NOT NULL,
+        image_path TEXT NOT NULL,
+        pose TEXT,
+        weight REAL,
+        notes TEXT,
+        created_at TEXT NOT NULL
+      )
+    ''');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_prog_photo_date ON progress_photos (date)');
+  }
+
   /// Xóa dữ liệu khi người dùng đăng xuất hoặc dọn dẹp app
   Future<void> clearAllUserData() async {
     final db = await database;
@@ -244,6 +303,9 @@ class AppDatabase {
       await txn.delete('food_entries');
       await txn.delete('daily_water_history');
       await txn.delete('chat_messages');
+      await txn.delete('favorite_foods');
+      await txn.delete('body_measurements');
+      await txn.delete('progress_photos');
     });
   }
 
@@ -255,3 +317,4 @@ class AppDatabase {
     }
   }
 }
+

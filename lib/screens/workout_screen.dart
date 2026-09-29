@@ -9,6 +9,8 @@ import '../widgets/app_ui_components.dart';
 import '../services/locale_service.dart';
 import '../services/storage_service.dart';
 import '../widgets/workout_setup_sheet.dart';
+import '../widgets/muscle_anatomy_map_widget.dart';
+import '../widgets/exercise_guide_sheet.dart';
 import 'active_workout_screen.dart';
 
 enum ExerciseEquipmentFilter { all, bodyweight, dumbbell }
@@ -887,9 +889,14 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
             // 3. Badges & Achievements Widget
             BadgesAchievementWidget(key: _badgesKey),
 
+            const SizedBox(height: 24),
+
+            // 4. Interactive Muscle Anatomy Map (v2.0)
+            const MuscleAnatomyMapWidget(),
+
             const SizedBox(height: 28),
 
-            // 4. Exercises Header with Gender Switcher
+            // 5. Exercises Header with Gender Switcher
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               crossAxisAlignment: CrossAxisAlignment.end,
@@ -1142,30 +1149,65 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
                       height: 135,
                     ),
                     const SizedBox(height: 10),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.05),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const HugeIcon(
-                            icon: HugeIcons.strokeRoundedBodyPartMuscle,
-                            color: Color(0xFFFF453A),
-                            size: 13,
-                          ),
-                          const SizedBox(width: 6),
-                          Flexible(
-                            child: Text(
-                              ExerciseGuideData.getForExercise(ex.title).targetMuscles,
-                              style: const TextStyle(color: Colors.white70, fontSize: 11),
-                              overflow: TextOverflow.ellipsis,
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Flexible(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.05),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const HugeIcon(
+                                  icon: HugeIcons.strokeRoundedBodyPartMuscle,
+                                  color: Color(0xFFFF453A),
+                                  size: 13,
+                                ),
+                                const SizedBox(width: 6),
+                                Flexible(
+                                  child: Text(
+                                    ExerciseGuideData.getForExercise(ex.title).targetMuscles,
+                                    style: const TextStyle(color: Colors.white70, fontSize: 11),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                        ],
-                      ),
+                        ),
+                        const SizedBox(width: 8),
+                        InkWell(
+                          onTap: () => ExerciseGuideSheet.show(context, exerciseTitle: ex.title),
+                          borderRadius: BorderRadius.circular(8),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF00F0FF).withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: const Color(0xFF00F0FF).withValues(alpha: 0.3)),
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.menu_book, color: Color(0xFF00F0FF), size: 13),
+                                SizedBox(width: 4),
+                                Text(
+                                  'Kỹ thuật chuẩn',
+                                  style: TextStyle(
+                                    color: Color(0xFF00F0FF),
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 14),
                     Row(

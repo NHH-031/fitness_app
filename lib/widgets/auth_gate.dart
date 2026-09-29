@@ -6,6 +6,7 @@ import '../screens/onboarding_profile_screen.dart';
 import '../services/auth_service.dart';
 import '../services/storage_service.dart';
 import '../theme.dart';
+import 'biometric_gate.dart';
 
 class AuthGate extends StatelessWidget {
   const AuthGate({super.key});
@@ -26,7 +27,7 @@ class AuthGate extends StatelessWidget {
           }
           final hasOnboarded = snapshot.data ?? false;
           if (hasOnboarded) {
-            return const MainScreen();
+            return const BiometricGate(child: MainScreen());
           }
           return const OnboardingProfileScreen();
         },

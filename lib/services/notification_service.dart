@@ -170,4 +170,107 @@ class NotificationService {
   Future<void> cancelAll() async {
     await _notificationsPlugin.cancelAll();
   }
+
+  // ========================================================
+  // PHIÊN BẢN 2.0: ĐỒNG HỒ NGHỈ NGƠI TRÊN NOTIFICATION / MÀN HÌNH KHÓA
+  // ========================================================
+  static const int _restNotificationId = 2001;
+  static const String _restChannelId = 'rest_timer_channel';
+  static const String _restChannelName = 'Rest Timer (Đồng hồ nghỉ)';
+
+  NotificationDetails _getRestNotificationDetails({
+    required int maxProgress,
+    required int currentProgress,
+    bool ongoing = true,
+  }) {
+    final androidDetails = AndroidNotificationDetails(
+      _restChannelId,
+      _restChannelName,
+      channelDescription: 'Đếm ngược thời gian nghỉ giữa các hiệp tập luyện.',
+      importance: Importance.high,
+      priority: Priority.high,
+      showWhen: false,
+      onlyAlertOnce: true,
+      ongoing: ongoing,
+      autoCancel: !ongoing,
+      showProgress: true,
+      maxProgress: maxProgress,
+      progress: currentProgress,
+      playSound: !ongoing,
+      enableVibration: true,
+      icon: '@mipmap/ic_launcher',
+    );
+
+    const iosDetails = DarwinNotificationDetails(
+      presentAlert: true,
+      presentBadge: false,
+      presentSound: false,
+    );
+
+    return NotificationDetails(android: androidDetails, iOS: iosDetails);
+  }
+
+  /// Cập nhật notification đếm ngược thời gian nghỉ ngơi
+  Future<void> showRestTimerNotification({
+    required int remainingSeconds,
+    required int totalSeconds,
+    required String exerciseTitle,
+  }) async {
+    try {
+      final currentProgress = (totalSeconds - remainingSeconds).clamp(0, totalSeconds);
+      await _notificationsPlugin.show(
+        id: _restNotificationId,
+        title: '⏱️ Đang nghỉ giữa hiệp: ${remainingSeconds}s',
+        body: 'Chuẩn bị cho hiệp tiếp theo của $exerciseTitle',
+        notificationDetails: _getRestNotificationDetails(
+          maxProgress: totalSeconds,
+          currentProgress: currentProgress,
+          ongoing: true,
+        ),
+      );
+    } catch (e) {
+      debugPrint('Lỗi hiển thị rest notification: $e');
+    }
+  }
+
+  /// Thông báo và rung khi hết giờ nghỉ
+  Future<void> showRestFinishedNotification({required String exerciseTitle}) async {
+    try {
+      const androidDetails = AndroidNotificationDetails(
+        _restChannelId,
+        _restChannelName,
+        channelDescription: 'Đếm ngược thời gian nghỉ giữa các hiệp tập luyện.',
+        importance: Importance.max,
+        priority: Priority.high,
+        playSound: true,
+        enableVibration: true,
+        icon: '@mipmap/ic_launcher',
+      );
+      const iosDetails = DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+      );
+
+      await _notificationsPlugin.show(
+        id: _restNotificationId,
+        title: '🔔 Hết giờ nghỉ! Sẵn sàng nâng tạ!',
+        body: 'Đã đến lúc bắt đầu hiệp tiếp theo của $exerciseTitle',
+        notificationDetails: const NotificationDetails(
+          android: androidDetails,
+          iOS: iosDetails,
+        ),
+      );
+    } catch (e) {
+      debugPrint('Lỗi hiển thị rest finished notification: $e');
+    }
+  }
+
+  /// Hủy thông báo đồng hồ nghỉ
+  Future<void> cancelRestTimerNotification() async {
+    try {
+      await _notificationsPlugin.cancel(id: _restNotificationId);
+    } catch (_) {}
+  }
 }
+

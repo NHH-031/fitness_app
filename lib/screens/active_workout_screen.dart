@@ -9,6 +9,8 @@ import '../services/storage_service.dart';
 import '../services/locale_service.dart';
 import '../utils/app_haptics.dart';
 import '../services/achievement_service.dart';
+import '../services/notification_service.dart';
+import '../widgets/exercise_guide_sheet.dart';
 
 class ActiveWorkoutScreen extends StatefulWidget {
   final String title;
@@ -62,6 +64,11 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> {
   Timer? _restTimer;
   int _elapsedWorkoutSeconds = 0;
   Timer? _workoutElapsedTimer;
+
+  // Progressive Overload & PR tracking
+  Map<String, dynamic>? _lastWorkoutLog;
+  double? _personalRecordWeight;
+  bool _isNewPR = false;
 
   bool get _hasWeight =>
       (_equipment == 'dumbbell' || ExerciseGuideData.getForExercise(_currentTitle).isDumbbell) &&
@@ -153,6 +160,23 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> {
     if (!_isRepsMode) {
       _startTimer();
     }
+    _loadProgressiveOverloadData();
+  }
+
+  Future<void> _loadProgressiveOverloadData() async {
+    final last = await WorkoutRepository.instance.getLatestLogForExercise(_currentTitle);
+    final pr = await WorkoutRepository.instance.getPersonalRecordWeight(_currentTitle);
+    if (mounted) {
+      setState(() {
+        _lastWorkoutLog = last;
+        _personalRecordWeight = pr;
+        if (_weightKg != null && pr != null && _weightKg! > pr) {
+          _isNewPR = true;
+        } else {
+          _isNewPR = false;
+        }
+      });
+    }
   }
 
   void _switchExercise(
@@ -189,7 +213,9 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> {
         }
       }
     });
+    _loadProgressiveOverloadData();
   }
+
 
   void _startElapsedTimer() {
     _workoutElapsedTimer?.cancel();
@@ -232,17 +258,30 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> {
 
   void _startRestTimer() {
     _restTimer?.cancel();
+    NotificationService().showRestTimerNotification(
+      remainingSeconds: _restRemainingSeconds,
+      totalSeconds: _restDurationSeconds,
+      exerciseTitle: _currentTitle,
+    );
     _restTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (_restRemainingSeconds > 0) {
         setState(() {
           _restRemainingSeconds--;
         });
+        if (_restRemainingSeconds % 5 == 0 || _restRemainingSeconds <= 5) {
+          NotificationService().showRestTimerNotification(
+            remainingSeconds: _restRemainingSeconds,
+            totalSeconds: _restDurationSeconds,
+            exerciseTitle: _currentTitle,
+          );
+        }
         if (_restRemainingSeconds <= 3 && _restRemainingSeconds > 0) {
           AppHaptics.countdownTick();
         }
       } else {
         _restTimer?.cancel();
         AppHaptics.timerFinished();
+        NotificationService().showRestFinishedNotification(exerciseTitle: _currentTitle);
         _skipRest();
       }
     });
@@ -250,6 +289,7 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> {
 
   void _skipRest() {
     _restTimer?.cancel();
+    NotificationService().cancelRestTimerNotification();
     AppHaptics.selection();
     setState(() {
       _isResting = false;
@@ -263,6 +303,11 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> {
     setState(() {
       _restRemainingSeconds += seconds;
     });
+    NotificationService().showRestTimerNotification(
+      remainingSeconds: _restRemainingSeconds,
+      totalSeconds: _restDurationSeconds + seconds,
+      exerciseTitle: _currentTitle,
+    );
   }
 
   void _adjustReps(int delta) {
@@ -277,8 +322,12 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> {
     AppHaptics.selection();
     setState(() {
       _weightKg = (_weightKg! + delta).clamp(1.0, 100.0);
+      if (_personalRecordWeight != null && _weightKg! > _personalRecordWeight!) {
+        _isNewPR = true;
+      }
     });
   }
+
 
   void _startTimer() {
     _timer?.cancel();
@@ -328,6 +377,7 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> {
     _timer?.cancel();
     _restTimer?.cancel();
     _workoutElapsedTimer?.cancel();
+    NotificationService().cancelRestTimerNotification();
 
     final elapsedSeconds = _isRepsMode
         ? _elapsedWorkoutSeconds
@@ -357,8 +407,10 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> {
     _timer?.cancel();
     _restTimer?.cancel();
     _workoutElapsedTimer?.cancel();
+    NotificationService().cancelRestTimerNotification();
     super.dispose();
   }
+
 
   String _formatTime(int seconds) {
     int minutes = seconds ~/ 60;
@@ -634,6 +686,11 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> {
           ),
           centerTitle: true,
           actions: [
+            IconButton(
+              tooltip: 'Kỹ thuật chuẩn & Lỗi sai',
+              icon: const Icon(Icons.help_outline_rounded, color: Color(0xFF00F0FF), size: 22),
+              onPressed: () => ExerciseGuideSheet.show(context, exerciseTitle: _currentTitle),
+            ),
             Padding(
               padding: const EdgeInsets.only(right: 12.0),
               child: IconButton(
@@ -730,7 +787,74 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> {
                     height: 155,
                   ),
 
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 14),
+
+                  // Progressive Overload & PR Banner (v2.0)
+                  if (_lastWorkoutLog != null || _isNewPR) ...[
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 14),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: _isNewPR
+                              ? [
+                                  const Color(0xFFFF9E00).withValues(alpha: 0.22),
+                                  const Color(0xFFFF2A6D).withValues(alpha: 0.22),
+                                ]
+                              : [
+                                  const Color(0xFF0072FF).withValues(alpha: 0.16),
+                                  const Color(0xFF00F0FF).withValues(alpha: 0.16),
+                                ],
+                        ),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: _isNewPR
+                              ? const Color(0xFFFF9E00)
+                              : const Color(0xFF00F0FF).withValues(alpha: 0.4),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            _isNewPR ? Icons.emoji_events_rounded : Icons.trending_up_rounded,
+                            color: _isNewPR ? const Color(0xFFFF9E00) : const Color(0xFF00F0FF),
+                            size: 24,
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  _isNewPR
+                                      ? '🏆 KỶ LỤC CÁ NHÂN MỚI (PR)!'
+                                      : '⚡ LŨY TIẾN TẢI TRỌNG (PROGRESSIVE OVERLOAD)',
+                                  style: TextStyle(
+                                    color: _isNewPR ? const Color(0xFFFF9E00) : const Color(0xFF00F0FF),
+                                    fontSize: 10.5,
+                                    fontWeight: FontWeight.w800,
+                                    letterSpacing: 0.8,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  _isNewPR
+                                      ? 'Bạn đang nâng mức ${_weightKg ?? 0}kg (Kỷ lục cũ: ${_personalRecordWeight ?? 0}kg). Giữ vững phong độ!'
+                                      : 'Buổi trước: ${_lastWorkoutLog!['weight'] != null ? '${_lastWorkoutLog!['weight']}kg' : 'Bodyweight'} × ${_lastWorkoutLog!['reps'] ?? 0} reps → Hôm nay: +1 rep hoặc +1-2.5kg để phát triển cơ bắp!',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 11.5,
+                                    fontWeight: FontWeight.w500,
+                                    height: 1.3,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
 
                   // Dual Mode Display: Reps & Sets Mode vs Countdown Timer Mode
                   if (_isRepsMode) ...[

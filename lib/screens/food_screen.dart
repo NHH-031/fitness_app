@@ -3,6 +3,7 @@ import 'package:hugeicons/hugeicons.dart';
 import '../theme.dart';
 import '../services/locale_service.dart';
 import '../widgets/macro_donut_chart_widget.dart';
+import '../widgets/quick_favorites_food_bar.dart';
 import '../widgets/meal_category_card_widget.dart';
 import '../widgets/hydration_wave_widget.dart';
 import '../widgets/ai_nutritionist_chat_dialog.dart';
@@ -201,6 +202,10 @@ class _FoodScreenState extends State<FoodScreen> {
 
               // Macro Donut Chart & Goal Selector
               const MacroDonutChartWidget(),
+              const SizedBox(height: 20),
+
+              // Quick-Add Favorites Bar (v2.0)
+              const QuickFavoritesFoodBar(),
               const SizedBox(height: 24),
 
               // Section Title: Meal Categories

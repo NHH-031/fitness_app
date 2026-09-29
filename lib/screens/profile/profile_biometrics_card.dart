@@ -3,6 +3,7 @@ import 'package:hugeicons/hugeicons.dart';
 import '../../models/user_profile.dart';
 import '../../services/locale_service.dart';
 import '../../theme.dart';
+import '../body_measurements_screen.dart';
 
 class ProfileBiometricsCard extends StatelessWidget {
   final UserProfile profile;
@@ -149,6 +150,59 @@ class ProfileBiometricsCard extends StatelessWidget {
                 ),
               ),
             ],
+          ),
+
+          const SizedBox(height: 14),
+
+          // Tap to open Body Measurements & Before/After Photo
+          InkWell(
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const BodyMeasurementsScreen()),
+              );
+            },
+            borderRadius: BorderRadius.circular(16),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF0F2636), Color(0xFF141A28)],
+                ),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: AppColors.info.withValues(alpha: 0.3)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.straighten_rounded, color: AppColors.info, size: 20),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          LocaleService.isVietnamese
+                              ? 'Số đo các vòng & % Mỡ Hải quân (US Navy)'
+                              : 'Body Circumferences & US Navy Body Fat',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          LocaleService.isVietnamese
+                              ? 'Theo dõi vòng eo, ngực & so sánh ảnh Before/After'
+                              : 'Track waist, chest & compare Before/After photos',
+                          style: const TextStyle(fontSize: 10.5, color: Colors.white60),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Icon(Icons.chevron_right_rounded, color: AppColors.info, size: 20),
+                ],
+              ),
+            ),
           ),
         ],
       ),

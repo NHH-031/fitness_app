@@ -20,6 +20,7 @@ import 'profile/profile_health_connect_card.dart';
 import 'profile/profile_hero_card.dart';
 import 'profile/profile_language_card.dart';
 import 'profile/profile_macro_blueprint_card.dart';
+import 'profile/profile_security_report_card.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -445,6 +446,11 @@ class _ProfileScreenState extends State<ProfileScreen>
                 bmiColor: bmiColor,
                 weightDiff: weightDiff,
               ),
+
+              const SizedBox(height: 18),
+
+              // 7. Security (Biometric Lock) & Health Report Export
+              const ProfileSecurityReportCard(),
 
               const SizedBox(height: 18),
 

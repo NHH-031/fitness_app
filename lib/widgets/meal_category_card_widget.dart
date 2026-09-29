@@ -10,6 +10,7 @@ import '../services/speech_service.dart';
 import '../services/storage_service.dart';
 import '../services/locale_service.dart';
 import '../utils/app_haptics.dart';
+import '../models/favorite_food.dart';
 import 'app_ui_components.dart';
 
 class MealCategoryCardWidget extends StatefulWidget {
@@ -42,6 +43,7 @@ class _MealCategoryCardWidgetState extends State<MealCategoryCardWidget> {
   bool _isExpanded = true;
   List<FoodLogEntry> _items = [];
   int _totalMealCalories = 0;
+  Set<String> _favoriteNames = {};
 
   @override
   void initState() {
@@ -58,6 +60,7 @@ class _MealCategoryCardWidgetState extends State<MealCategoryCardWidget> {
 
   Future<void> _loadMealItems() async {
     final list = await StorageService.getTodayFoodLogsByMeal(widget.mealType);
+    final favs = await NutritionRepository.instance.getFavoriteFoods();
     int sum = 0;
     for (final item in list) {
       sum += item.calories;
@@ -66,6 +69,7 @@ class _MealCategoryCardWidgetState extends State<MealCategoryCardWidget> {
       setState(() {
         _items = list;
         _totalMealCalories = sum;
+        _favoriteNames = favs.map((f) => f.name.trim().toLowerCase()).toSet();
       });
     }
   }
@@ -343,6 +347,44 @@ class _MealCategoryCardWidgetState extends State<MealCategoryCardWidget> {
                           ),
                         ),
                         IconButton(
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                          icon: Icon(
+                            _favoriteNames.contains(item.name.trim().toLowerCase())
+                                ? Icons.favorite
+                                : Icons.favorite_border,
+                            color: _favoriteNames.contains(item.name.trim().toLowerCase())
+                                ? const Color(0xFFFF2A6D)
+                                : Colors.white38,
+                            size: 18,
+                          ),
+                          onPressed: () async {
+                            AppHaptics.light();
+                            final isFav = _favoriteNames.contains(item.name.trim().toLowerCase());
+                            if (isFav) {
+                              final existing = await NutritionRepository.instance.getFavoriteFoodByName(item.name);
+                              if (existing != null) {
+                                await NutritionRepository.instance.deleteFavoriteFood(existing.id);
+                              }
+                            } else {
+                              final fav = FavoriteFood(
+                                id: DateTime.now().millisecondsSinceEpoch.toString(),
+                                name: item.name,
+                                calories: item.calories,
+                                protein: item.protein,
+                                carbs: item.carbs,
+                                fat: item.fat,
+                                imagePath: item.imagePath,
+                                createdAt: DateTime.now(),
+                              );
+                              await NutritionRepository.instance.addFavoriteFood(fav);
+                            }
+                            await _loadMealItems();
+                          },
+                        ),
+                        IconButton(
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
                           icon: const HugeIcon(
                             icon: HugeIcons.strokeRoundedDelete02,
                             color: Colors.white38,

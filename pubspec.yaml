@@ -59,6 +59,9 @@ dependencies:
   http: ^1.6.0
   mobile_scanner: ^7.4.2
   health: ^13.3.2
+  local_auth: ^3.0.2
+  share_plus: ^13.3.0
+  path_provider: ^2.1.6
 
 dev_dependencies:
   flutter_test:

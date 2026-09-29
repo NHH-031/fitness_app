@@ -189,4 +189,75 @@ class WorkoutRepository {
     await db.delete('workout_logs');
     invalidateCache();
   }
+
+  // ========================================================
+  // PHIÊN BẢN 2.0: LŨY TIẾN TẢI TRỌNG & KỶ LỤC CÁ NHÂN (PR)
+  // ========================================================
+
+  /// Lấy nhật ký buổi tập gần nhất của một bài tập để phục vụ gợi ý Progressive Overload
+  Future<Map<String, dynamic>?> getLatestLogForExercise(String title) async {
+    final db = await AppDatabase.instance.database;
+    final results = await db.query(
+      'workout_logs',
+      where: 'LOWER(title) = ?',
+      whereArgs: [title.trim().toLowerCase()],
+      orderBy: 'timestamp DESC',
+      limit: 1,
+    );
+
+    if (results.isNotEmpty) {
+      return Map<String, dynamic>.from(results.first);
+    }
+
+    // Fallback: tìm kiếm mềm (partial search) nếu tên có biến thể
+    final fallbackResults = await db.query(
+      'workout_logs',
+      where: 'LOWER(title) LIKE ?',
+      whereArgs: ['%${title.trim().toLowerCase()}%'],
+      orderBy: 'timestamp DESC',
+      limit: 1,
+    );
+
+    if (fallbackResults.isNotEmpty) {
+      return Map<String, dynamic>.from(fallbackResults.first);
+    }
+    return null;
+  }
+
+  /// Lấy mức tạ nặng nhất (Personal Record - PR) người dùng từng đẩy cho bài tập này
+  Future<double?> getPersonalRecordWeight(String title) async {
+    final db = await AppDatabase.instance.database;
+    final results = await db.rawQuery(
+      '''
+      SELECT MAX(weight) as max_weight 
+      FROM workout_logs 
+      WHERE LOWER(title) LIKE ? AND weight IS NOT NULL AND weight > 0
+      ''',
+      ['%${title.trim().toLowerCase()}%'],
+    );
+
+    if (results.isNotEmpty && results.first['max_weight'] != null) {
+      return (results.first['max_weight'] as num).toDouble();
+    }
+    return null;
+  }
+
+  /// Lấy số reps cao nhất từng đạt được ở mức tạ cụ thể
+  Future<int?> getPersonalRecordReps(String title, {double? atWeight}) async {
+    final db = await AppDatabase.instance.database;
+    String sql = 'SELECT MAX(reps) as max_reps FROM workout_logs WHERE LOWER(title) LIKE ? AND reps IS NOT NULL';
+    List<dynamic> args = ['%${title.trim().toLowerCase()}%'];
+
+    if (atWeight != null && atWeight > 0) {
+      sql += ' AND weight = ?';
+      args.add(atWeight);
+    }
+
+    final results = await db.rawQuery(sql, args);
+    if (results.isNotEmpty && results.first['max_reps'] != null) {
+      return (results.first['max_reps'] as num).toInt();
+    }
+    return null;
+  }
 }
+

@@ -152,4 +152,69 @@ class UserMetricsService {
     final km = (steps * strideMeter) / 1000.0;
     return double.parse(km.toStringAsFixed(2));
   }
+
+  // ========================================================
+  // PHIÊN BẢN 2.0: TÍNH % MỠ CƠ THỂ THEO CHUẨN HẢI QUÂN HOA KỲ (US NAVY)
+  // ========================================================
+
+  /// Tính % Mỡ cơ thể theo công thức US Navy Circumference Method
+  /// Nam: 495 / (1.0324 - 0.19077*log10(waist - neck) + 0.15456*log10(height)) - 450
+  /// Nữ:  495 / (1.29579 - 0.35004*log10(waist + hips - neck) + 0.22100*log10(height)) - 450
+  static double calculateBodyFatPercent({
+    required double waistCm,
+    required double neckCm,
+    required double heightCm,
+    double? hipsCm,
+    required String gender,
+  }) {
+    if (heightCm <= 0 || waistCm <= 0 || neckCm <= 0) return 0.0;
+
+    final isFemale = gender.trim().toLowerCase() == 'female';
+
+    if (isFemale) {
+      final hips = hipsCm ?? (waistCm * 1.15);
+      final sum = waistCm + hips - neckCm;
+      if (sum <= 0) return 15.0;
+      final logSum = log(sum) / ln10;
+      final logHeight = log(heightCm) / ln10;
+      final density = 1.29579 - (0.35004 * logSum) + (0.22100 * logHeight);
+      if (density <= 0) return 20.0;
+      final bf = (495 / density) - 450;
+      return double.parse(bf.clamp(8.0, 55.0).toStringAsFixed(1));
+    } else {
+      final diff = waistCm - neckCm;
+      if (diff <= 0) return 10.0;
+      final logDiff = log(diff) / ln10;
+      final logHeight = log(heightCm) / ln10;
+      final density = 1.0324 - (0.19077 * logDiff) + (0.15456 * logHeight);
+      if (density <= 0) return 15.0;
+      final bf = (495 / density) - 450;
+      return double.parse(bf.clamp(3.0, 50.0).toStringAsFixed(1));
+    }
+  }
+
+  /// Phân loại % Mỡ cơ thể theo chuẩn Hội đồng Thể dục Hoa Kỳ (ACE)
+  static String getBodyFatCategory(
+    double bodyFatPercent, {
+    required String gender,
+    bool? isVietnamese,
+  }) {
+    final vi = isVietnamese ?? LocaleService.isVietnamese;
+    final isFemale = gender.trim().toLowerCase() == 'female';
+
+    if (isFemale) {
+      if (bodyFatPercent < 14) return vi ? 'Thiết yếu (Rất thấp)' : 'Essential';
+      if (bodyFatPercent < 21) return vi ? 'Vận động viên' : 'Athletes';
+      if (bodyFatPercent < 25) return vi ? 'Săn chắc thể hình' : 'Fitness';
+      if (bodyFatPercent < 32) return vi ? 'Bình thường' : 'Average';
+      return vi ? 'Thừa mỡ' : 'Obese';
+    } else {
+      if (bodyFatPercent < 6) return vi ? 'Thiết yếu (Rất thấp)' : 'Essential';
+      if (bodyFatPercent < 14) return vi ? 'Vận động viên' : 'Athletes';
+      if (bodyFatPercent < 18) return vi ? 'Săn chắc thể hình' : 'Fitness';
+      if (bodyFatPercent < 25) return vi ? 'Bình thường' : 'Average';
+      return vi ? 'Thừa mỡ' : 'Obese';
+    }
+  }
 }
+
