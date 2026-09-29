@@ -3,6 +3,7 @@ import 'package:hugeicons/hugeicons.dart';
 import '../theme.dart';
 import '../utils/app_haptics.dart';
 import 'app_ui_components.dart';
+import 'exercise_pose_widget.dart';
 
 class FormTechniqueGuideData {
   final String title;
@@ -27,12 +28,14 @@ class ExerciseGuideSheet extends StatelessWidget {
   final String exerciseTitle;
   final String? targetMuscle;
   final String? secondaryMuscles;
+  final bool isMale;
 
   const ExerciseGuideSheet({
     super.key,
     required this.exerciseTitle,
     this.targetMuscle,
     this.secondaryMuscles,
+    this.isMale = true,
   });
 
   static void show(
@@ -40,6 +43,7 @@ class ExerciseGuideSheet extends StatelessWidget {
     required String exerciseTitle,
     String? targetMuscle,
     String? secondaryMuscles,
+    bool isMale = true,
   }) {
     AppHaptics.light();
     AppBottomSheet.show(
@@ -48,6 +52,7 @@ class ExerciseGuideSheet extends StatelessWidget {
         exerciseTitle: exerciseTitle,
         targetMuscle: targetMuscle,
         secondaryMuscles: secondaryMuscles,
+        isMale: isMale,
       ),
     );
   }
@@ -265,6 +270,8 @@ class ExerciseGuideSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     final guide = _resolveGuide();
 
+    final activeColor = isMale ? const Color(0xFF00F0FF) : const Color(0xFFFF2E93);
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 16),
       decoration: const BoxDecoration(
@@ -292,12 +299,12 @@ class ExerciseGuideSheet extends StatelessWidget {
                           Container(
                             padding: const EdgeInsets.all(6),
                             decoration: BoxDecoration(
-                              color: const Color(0xFF00F0FF).withValues(alpha: 0.12),
+                              color: activeColor.withValues(alpha: 0.12),
                               borderRadius: BorderRadius.circular(8),
                             ),
-                            child: const HugeIcon(
+                            child: HugeIcon(
                               icon: HugeIcons.strokeRoundedDumbbell01,
-                              color: Color(0xFF00F0FF),
+                              color: activeColor,
                               size: 16,
                             ),
                           ),
@@ -307,7 +314,7 @@ class ExerciseGuideSheet extends StatelessWidget {
                             style: AppTheme.font(
                               fontSize: 11,
                               fontWeight: FontWeight.w800,
-                              color: const Color(0xFF00F0FF),
+                              color: activeColor,
                               letterSpacing: 1.1,
                             ),
                           ),
@@ -333,6 +340,14 @@ class ExerciseGuideSheet extends StatelessWidget {
                 ),
               ],
             ),
+            const SizedBox(height: 14),
+
+            // Mô hình chuyển động giải phẫu động học 60 FPS
+            ExercisePoseAnimator(
+              exerciseTitle: exerciseTitle,
+              height: 160,
+              isMale: isMale,
+            ),
             const SizedBox(height: 16),
 
             // Muscles Anatomy Info Box
@@ -355,7 +370,7 @@ class ExerciseGuideSheet extends StatelessWidget {
                       Expanded(
                         child: Text(
                           guide.targetMuscle,
-                          style: const TextStyle(color: Color(0xFF00F0FF), fontWeight: FontWeight.w700, fontSize: 13),
+                          style: TextStyle(color: activeColor, fontWeight: FontWeight.w700, fontSize: 13),
                         ),
                       ),
                     ],

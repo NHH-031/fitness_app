@@ -1,7 +1,7 @@
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../theme.dart';
 import '../services/locale_service.dart';
+import 'anatomy_kinematic_painter.dart';
 
 class ExerciseGuideData {
   final String title;
@@ -661,17 +661,19 @@ class ExerciseGuideData {
   }
 }
 
-/// Widget hoạt ảnh chuyển động mô phỏng động tác 100% Offline mượt mà
+/// Widget hoạt ảnh chuyển động mô phỏng động tác giải phẫu 100% Offline mượt mà
 class ExercisePoseAnimator extends StatefulWidget {
   final String exerciseTitle;
   final bool isPlaying;
   final double height;
+  final bool isMale;
 
   const ExercisePoseAnimator({
     super.key,
     required this.exerciseTitle,
     this.isPlaying = true,
     this.height = 150,
+    this.isMale = true,
   });
 
   @override
@@ -714,7 +716,9 @@ class _ExercisePoseAnimatorState extends State<ExercisePoseAnimator>
 
   @override
   Widget build(BuildContext context) {
-    final guide = ExerciseGuideData.getForExercise(widget.exerciseTitle);
+    final activeThemeColor = widget.isMale
+        ? const Color(0xFF00F0FF)
+        : const Color(0xFFFF2E93);
 
     return AnimatedBuilder(
       animation: _controller,
@@ -723,748 +727,71 @@ class _ExercisePoseAnimatorState extends State<ExercisePoseAnimator>
           height: widget.height,
           width: double.infinity,
           decoration: BoxDecoration(
-            color: Colors.black38,
+            color: const Color(0xFF0C101A),
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: guide.themeColor.withValues(alpha: 0.3)),
+            border: Border.all(
+              color: activeThemeColor.withValues(alpha: 0.35),
+              width: 1.2,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: activeThemeColor.withValues(alpha: 0.10),
+                blurRadius: 16,
+                spreadRadius: 1,
+              ),
+            ],
           ),
-          child: CustomPaint(
-            painter: _PosePainter(
-              progress: _controller.value,
-              exerciseTitle: widget.exerciseTitle,
-              themeColor: guide.themeColor,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(20),
+            child: Stack(
+              children: [
+                // Kinematic Human Anatomy Model Canvas
+                Positioned.fill(
+                  child: CustomPaint(
+                    painter: AnatomyKinematicPainter(
+                      progress: _controller.value,
+                      exerciseTitle: widget.exerciseTitle,
+                      isMale: widget.isMale,
+                    ),
+                  ),
+                ),
+                // Gender badge in top left
+                Positioned(
+                  top: 10,
+                  left: 12,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: activeThemeColor.withValues(alpha: 0.14),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: activeThemeColor.withValues(alpha: 0.3)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          widget.isMale ? Icons.male_rounded : Icons.female_rounded,
+                          size: 11,
+                          color: activeThemeColor,
+                        ),
+                        const SizedBox(width: 3),
+                        Text(
+                          widget.isMale ? 'Mô hình Nam ♂' : 'Mô hình Nữ ♀',
+                          style: TextStyle(
+                            color: activeThemeColor,
+                            fontSize: 9.5,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         );
       },
     );
-  }
-}
-
-class _PosePainter extends CustomPainter {
-  final double progress;
-  final String exerciseTitle;
-  final Color themeColor;
-
-  _PosePainter({
-    required this.progress,
-    required this.exerciseTitle,
-    required this.themeColor,
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height / 2);
-    final lower = exerciseTitle.toLowerCase();
-
-    // Sàn nhà / Nền đỡ
-    final floorPaint = Paint()
-      ..color = Colors.white12
-      ..strokeWidth = 3
-      ..style = PaintingStyle.stroke;
-    canvas.drawLine(
-      Offset(size.width * 0.12, size.height * 0.8),
-      Offset(size.width * 0.88, size.height * 0.8),
-      floorPaint,
-    );
-
-    // Vầng hào quang chuyển động
-    final glowPaint = Paint()
-      ..color = themeColor.withValues(alpha: 0.12 + 0.15 * progress)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 20);
-    canvas.drawCircle(center, 45 + 10 * progress, glowPaint);
-
-    final jointPaint = Paint()
-      ..color = Colors.white
-      ..style = PaintingStyle.fill;
-
-    final limbPaint = Paint()
-      ..color = themeColor
-      ..strokeWidth = 6
-      ..strokeCap = StrokeCap.round
-      ..style = PaintingStyle.stroke;
-
-    if (lower.contains('floor press') || lower.contains('bench press') || lower.contains('đẩy ngực')) {
-      _drawDumbbellFloorPress(canvas, size, limbPaint, jointPaint);
-    } else if (lower.contains('shoulder press') || lower.contains('đẩy vai')) {
-      _drawDumbbellShoulderPress(canvas, size, limbPaint, jointPaint);
-    } else if (lower.contains('curl') || lower.contains('cuốn tạ') || lower.contains('tay trước') || lower.contains('thon bắp tay')) {
-      _drawDumbbellCurl(canvas, size, limbPaint, jointPaint);
-    } else if (lower.contains('row') || lower.contains('kéo tạ') || lower.contains('thon lưng') || lower.contains('lưng xô')) {
-      _drawDumbbellRow(canvas, size, limbPaint, jointPaint);
-    } else if (lower.contains('lateral') || lower.contains('dang tạ') || lower.contains('vai thon')) {
-      _drawDumbbellLateralRaise(canvas, size, limbPaint, jointPaint);
-    } else if (lower.contains('rdl') || lower.contains('deadlift')) {
-      _drawDumbbellRDL(canvas, size, limbPaint, jointPaint);
-    } else if (lower.contains('triceps') || lower.contains('sau đầu') || lower.contains('tay sau')) {
-      _drawDumbbellTriceps(canvas, size, limbPaint, jointPaint);
-    } else if (lower.contains('hip thrust') || (lower.contains('cầu mông') && lower.contains('tạ'))) {
-      _drawGluteBridgeWithDumbbell(canvas, size, limbPaint, jointPaint);
-    } else if (lower.contains('sumo') || (lower.contains('squat') && (lower.contains('ôm tạ') || lower.contains('goblet') || lower.contains('tạ')))) {
-      _drawSquatWithDumbbell(canvas, size, limbPaint, jointPaint);
-    } else if (lower.contains('pull') || lower.contains('xà đơn')) {
-      _drawPullUp(canvas, size, limbPaint, jointPaint);
-    } else if (lower.contains('hít đất') || lower.contains('push')) {
-      _drawPushUp(canvas, size, limbPaint, jointPaint);
-    } else if (lower.contains('burpee')) {
-      _drawBurpee(canvas, size, limbPaint, jointPaint);
-    } else if (lower.contains('mountain') || lower.contains('leo núi')) {
-      _drawMountainClimber(canvas, size, limbPaint, jointPaint);
-    } else if (lower.contains('cầu mông') || lower.contains('bridge')) {
-      _drawGluteBridge(canvas, size, limbPaint, jointPaint);
-    } else if (lower.contains('đá mông') || lower.contains('donkey')) {
-      _drawDonkeyKick(canvas, size, limbPaint, jointPaint);
-    } else if (lower.contains('chùng chân') || lower.contains('lunge')) {
-      _drawLunge(canvas, size, limbPaint, jointPaint);
-    } else if (lower.contains('jumping') || lower.contains('nhảy')) {
-      _drawJumpingJack(canvas, size, limbPaint, jointPaint);
-    } else if (lower.contains('gập bụng') || lower.contains('crunch') || lower.contains('russian') || lower.contains('vặn')) {
-      _drawCrunch(canvas, size, limbPaint, jointPaint);
-    } else if (lower.contains('plank')) {
-      _drawPlank(canvas, size, limbPaint, jointPaint);
-    } else if (lower.contains('squat')) {
-      _drawSquat(canvas, size, limbPaint, jointPaint);
-    } else {
-      _drawYoga(canvas, size, limbPaint, jointPaint);
-    }
-  }
-
-  void _drawPullUp(Canvas canvas, Size size, Paint limb, Paint joint) {
-    final barY = size.height * 0.22;
-    // Thanh xà đơn phía trên
-    final barPaint = Paint()
-      ..color = Colors.white70
-      ..strokeWidth = 5
-      ..strokeCap = StrokeCap.round;
-    canvas.drawLine(
-      Offset(size.width * 0.2, barY),
-      Offset(size.width * 0.8, barY),
-      barPaint,
-    );
-
-    // progress: 0.0 -> buông thẳng tay (hanging); 1.0 -> kéo cằm vượt xà (pull-up peak)
-    final pullProgress = progress;
-    final hangY = size.height * 0.52;
-    final chinUpY = size.height * 0.30;
-    final shoulderY = hangY - (hangY - chinUpY) * pullProgress;
-    final headY = shoulderY - 14;
-
-    final centerX = size.width * 0.5;
-    final head = Offset(centerX, headY);
-    final shoulder = Offset(centerX, shoulderY);
-
-    // 2 Bàn tay bám xà
-    final leftHand = Offset(centerX - 28, barY);
-    final rightHand = Offset(centerX + 28, barY);
-
-    // 2 Khuỷu tay
-    final elbowY = (shoulderY + barY) / 2 + (1.0 - pullProgress) * 10;
-    final leftElbow = Offset(centerX - 24 - (pullProgress * 10), elbowY);
-    final rightElbow = Offset(centerX + 24 + (pullProgress * 10), elbowY);
-
-    // Vẽ cánh tay
-    canvas.drawLine(leftHand, leftElbow, limb);
-    canvas.drawLine(leftElbow, shoulder, limb);
-    canvas.drawLine(rightHand, rightElbow, limb);
-    canvas.drawLine(rightElbow, shoulder, limb);
-
-    // Thân trên
-    final hipY = shoulderY + 28;
-    final hip = Offset(centerX, hipY);
-    canvas.drawLine(head, shoulder, limb);
-    canvas.drawLine(shoulder, hip, limb);
-
-    // Chân hơi gập gối tự nhiên
-    final kneeY = hipY + 22;
-    final footY = kneeY + 16;
-    final leftKnee = Offset(centerX - 8, kneeY);
-    final rightKnee = Offset(centerX + 8, kneeY);
-    final leftFoot = Offset(centerX - 12, footY);
-    final rightFoot = Offset(centerX + 12, footY);
-
-    canvas.drawLine(hip, leftKnee, limb);
-    canvas.drawLine(leftKnee, leftFoot, limb);
-    canvas.drawLine(hip, rightKnee, limb);
-    canvas.drawLine(rightKnee, rightFoot, limb);
-
-    // Khớp & Đầu
-    canvas.drawCircle(head, 9, joint);
-    canvas.drawCircle(shoulder, 4, joint);
-    canvas.drawCircle(hip, 4, joint);
-    canvas.drawCircle(leftHand, 4, joint);
-    canvas.drawCircle(rightHand, 4, joint);
-    canvas.drawCircle(leftElbow, 3, joint);
-    canvas.drawCircle(rightElbow, 3, joint);
-    canvas.drawCircle(leftKnee, 3, joint);
-    canvas.drawCircle(rightKnee, 3, joint);
-  }
-
-  void _drawPushUp(Canvas canvas, Size size, Paint limb, Paint joint) {
-    final floorY = size.height * 0.78;
-    final bodyLift = (1.0 - progress) * 26.0;
-
-    final hand = Offset(size.width * 0.36, floorY);
-    final feet = Offset(size.width * 0.75, floorY - 6);
-    final shoulder = Offset(size.width * 0.36, floorY - 22 - bodyLift);
-    final head = Offset(size.width * 0.27, floorY - 26 - bodyLift);
-    final hip = Offset(size.width * 0.58, floorY - 14 - (bodyLift * 0.7));
-
-    canvas.drawLine(head, shoulder, limb);
-    canvas.drawLine(shoulder, hip, limb);
-    canvas.drawLine(hip, feet, limb);
-
-    final elbow = Offset(size.width * 0.42, (shoulder.dy + hand.dy) / 2 + (1.0 - progress) * 12);
-    canvas.drawLine(shoulder, elbow, limb);
-    canvas.drawLine(elbow, hand, limb);
-
-    canvas.drawCircle(head, 9, joint);
-    canvas.drawCircle(shoulder, 4, joint);
-    canvas.drawCircle(elbow, 4, joint);
-    canvas.drawCircle(hip, 4, joint);
-    canvas.drawCircle(hand, 4, joint);
-    canvas.drawCircle(feet, 4, joint);
-  }
-
-  void _drawCrunch(Canvas canvas, Size size, Paint limb, Paint joint) {
-    final floorY = size.height * 0.78;
-    final curl = progress * 24.0;
-
-    final hip = Offset(size.width * 0.42, floorY - 8);
-    final knee = Offset(size.width * 0.58, floorY - 38);
-    final feet = Offset(size.width * 0.68, floorY);
-
-    final shoulder = Offset(size.width * 0.30 - (curl * 0.3), floorY - 10 - curl);
-    final head = Offset(size.width * 0.22 - (curl * 0.4), floorY - 16 - curl * 1.3);
-
-    canvas.drawLine(head, shoulder, limb);
-    canvas.drawLine(shoulder, hip, limb);
-    canvas.drawLine(hip, knee, limb);
-    canvas.drawLine(knee, feet, limb);
-
-    final hand = Offset(head.dx + 4, head.dy);
-    canvas.drawLine(shoulder, hand, limb);
-
-    canvas.drawCircle(head, 9, joint);
-    canvas.drawCircle(shoulder, 4, joint);
-    canvas.drawCircle(hip, 4, joint);
-    canvas.drawCircle(knee, 4, joint);
-    canvas.drawCircle(feet, 4, joint);
-  }
-
-  void _drawPlank(Canvas canvas, Size size, Paint limb, Paint joint) {
-    final floorY = size.height * 0.78;
-    final breathe = math.sin(progress * math.pi) * 4.0;
-
-    final elbow = Offset(size.width * 0.32, floorY);
-    final hand = Offset(size.width * 0.26, floorY);
-    final feet = Offset(size.width * 0.74, floorY - 6);
-
-    final shoulder = Offset(size.width * 0.32, floorY - 24 + breathe);
-    final head = Offset(size.width * 0.24, floorY - 26 + breathe);
-    final hip = Offset(size.width * 0.53, floorY - 16 + breathe);
-
-    canvas.drawLine(head, shoulder, limb);
-    canvas.drawLine(shoulder, hip, limb);
-    canvas.drawLine(hip, feet, limb);
-    canvas.drawLine(shoulder, elbow, limb);
-    canvas.drawLine(elbow, hand, limb);
-
-    canvas.drawCircle(head, 9, joint);
-    canvas.drawCircle(shoulder, 4, joint);
-    canvas.drawCircle(elbow, 4, joint);
-    canvas.drawCircle(hip, 4, joint);
-    canvas.drawCircle(feet, 4, joint);
-  }
-
-  void _drawSquat(Canvas canvas, Size size, Paint limb, Paint joint) {
-    final floorY = size.height * 0.78;
-    final squatDepth = progress * 28.0;
-
-    final feet = Offset(size.width * 0.50, floorY);
-    final knee = Offset(size.width * 0.58, floorY - 32 + (squatDepth * 0.4));
-    final hip = Offset(size.width * 0.42 - (progress * 10), floorY - 58 + squatDepth);
-    final shoulder = Offset(size.width * 0.47, hip.dy - 30);
-    final head = Offset(size.width * 0.48, shoulder.dy - 16);
-
-    canvas.drawLine(head, shoulder, limb);
-    canvas.drawLine(shoulder, hip, limb);
-    canvas.drawLine(hip, knee, limb);
-    canvas.drawLine(knee, feet, limb);
-
-    final hand = Offset(size.width * 0.65, shoulder.dy + 8);
-    canvas.drawLine(shoulder, hand, limb);
-
-    canvas.drawCircle(head, 9, joint);
-    canvas.drawCircle(shoulder, 4, joint);
-    canvas.drawCircle(hip, 4, joint);
-    canvas.drawCircle(knee, 4, joint);
-    canvas.drawCircle(feet, 4, joint);
-  }
-
-  void _drawLunge(Canvas canvas, Size size, Paint limb, Paint joint) {
-    final floorY = size.height * 0.78;
-    final depth = progress * 22.0;
-
-    final frontFoot = Offset(size.width * 0.64, floorY);
-    final frontKnee = Offset(size.width * 0.64, floorY - 26 + (depth * 0.3));
-    final backFoot = Offset(size.width * 0.32, floorY - 4);
-    final backKnee = Offset(size.width * 0.40, floorY - 10 - (20 - depth));
-
-    final hip = Offset(size.width * 0.48, floorY - 50 + depth);
-    final shoulder = Offset(size.width * 0.48, hip.dy - 30);
-    final head = Offset(size.width * 0.48, shoulder.dy - 16);
-
-    canvas.drawLine(head, shoulder, limb);
-    canvas.drawLine(shoulder, hip, limb);
-    canvas.drawLine(hip, frontKnee, limb);
-    canvas.drawLine(frontKnee, frontFoot, limb);
-    canvas.drawLine(hip, backKnee, limb);
-    canvas.drawLine(backKnee, backFoot, limb);
-
-    canvas.drawCircle(head, 9, joint);
-    canvas.drawCircle(shoulder, 4, joint);
-    canvas.drawCircle(hip, 4, joint);
-    canvas.drawCircle(frontKnee, 4, joint);
-    canvas.drawCircle(backKnee, 4, joint);
-  }
-
-  void _drawGluteBridge(Canvas canvas, Size size, Paint limb, Paint joint) {
-    final floorY = size.height * 0.78;
-    final bridgeLift = progress * 30.0;
-
-    final shoulder = Offset(size.width * 0.30, floorY - 8);
-    final head = Offset(size.width * 0.22, floorY - 8);
-    final feet = Offset(size.width * 0.68, floorY);
-    final knee = Offset(size.width * 0.60, floorY - 36);
-    final hip = Offset(size.width * 0.45, floorY - 12 - bridgeLift);
-
-    canvas.drawLine(head, shoulder, limb);
-    canvas.drawLine(shoulder, hip, limb);
-    canvas.drawLine(hip, knee, limb);
-    canvas.drawLine(knee, feet, limb);
-
-    canvas.drawCircle(head, 9, joint);
-    canvas.drawCircle(shoulder, 4, joint);
-    canvas.drawCircle(hip, 4, joint);
-    canvas.drawCircle(knee, 4, joint);
-    canvas.drawCircle(feet, 4, joint);
-  }
-
-  void _drawDonkeyKick(Canvas canvas, Size size, Paint limb, Paint joint) {
-    final floorY = size.height * 0.78;
-    final kickHeight = progress * 24.0;
-
-    final hand = Offset(size.width * 0.35, floorY);
-    final shoulder = Offset(size.width * 0.35, floorY - 32);
-    final head = Offset(size.width * 0.26, floorY - 32);
-    final hip = Offset(size.width * 0.58, floorY - 32);
-
-    final groundKnee = Offset(size.width * 0.58, floorY);
-    final kickKnee = Offset(size.width * 0.68, floorY - 30 - (kickHeight * 0.4));
-    final kickFoot = Offset(size.width * 0.75, floorY - 35 - kickHeight);
-
-    canvas.drawLine(head, shoulder, limb);
-    canvas.drawLine(shoulder, hand, limb);
-    canvas.drawLine(shoulder, hip, limb);
-    canvas.drawLine(hip, groundKnee, limb);
-    canvas.drawLine(hip, kickKnee, limb);
-    canvas.drawLine(kickKnee, kickFoot, limb);
-
-    canvas.drawCircle(head, 9, joint);
-    canvas.drawCircle(shoulder, 4, joint);
-    canvas.drawCircle(hip, 4, joint);
-    canvas.drawCircle(kickFoot, 4, joint);
-  }
-
-  void _drawMountainClimber(Canvas canvas, Size size, Paint limb, Paint joint) {
-    final floorY = size.height * 0.78;
-    final drive = progress * 24.0;
-
-    final hand = Offset(size.width * 0.35, floorY);
-    final shoulder = Offset(size.width * 0.35, floorY - 26);
-    final head = Offset(size.width * 0.27, floorY - 28);
-    final hip = Offset(size.width * 0.58, floorY - 20);
-
-    final backFoot = Offset(size.width * 0.78, floorY - 4);
-    final driveKnee = Offset(size.width * 0.46 + (drive * 0.2), floorY - 14);
-
-    canvas.drawLine(head, shoulder, limb);
-    canvas.drawLine(shoulder, hand, limb);
-    canvas.drawLine(shoulder, hip, limb);
-    canvas.drawLine(hip, backFoot, limb);
-    canvas.drawLine(hip, driveKnee, limb);
-
-    canvas.drawCircle(head, 9, joint);
-    canvas.drawCircle(shoulder, 4, joint);
-    canvas.drawCircle(hip, 4, joint);
-    canvas.drawCircle(driveKnee, 4, joint);
-  }
-
-  void _drawBurpee(Canvas canvas, Size size, Paint limb, Paint joint) {
-    final floorY = size.height * 0.78;
-    // progress: 0.0 (chống đẩy sát sàn) -> 1.0 (nhảy bật cao lên)
-    final jumpHeight = progress * 35.0;
-
-    final feet = Offset(size.width * 0.50, floorY - jumpHeight);
-    final hip = Offset(size.width * 0.50, feet.dy - 35);
-    final shoulder = Offset(size.width * 0.50, hip.dy - 30);
-    final head = Offset(size.width * 0.50, shoulder.dy - 16);
-
-    final handLeft = Offset(size.width * 0.36 - (progress * 8), shoulder.dy - 20);
-    final handRight = Offset(size.width * 0.64 + (progress * 8), shoulder.dy - 20);
-
-    canvas.drawLine(head, shoulder, limb);
-    canvas.drawLine(shoulder, hip, limb);
-    canvas.drawLine(hip, feet, limb);
-    canvas.drawLine(shoulder, handLeft, limb);
-    canvas.drawLine(shoulder, handRight, limb);
-
-    canvas.drawCircle(head, 9, joint);
-    canvas.drawCircle(shoulder, 4, joint);
-    canvas.drawCircle(hip, 4, joint);
-    canvas.drawCircle(feet, 4, joint);
-  }
-
-  void _drawJumpingJack(Canvas canvas, Size size, Paint limb, Paint joint) {
-    final floorY = size.height * 0.78;
-    final spread = progress * 20.0;
-
-    final centerFoot = Offset(size.width * 0.50, floorY);
-    final footLeft = Offset(centerFoot.dx - spread, floorY);
-    final footRight = Offset(centerFoot.dx + spread, floorY);
-
-    final hip = Offset(size.width * 0.50, floorY - 45);
-    final shoulder = Offset(size.width * 0.50, floorY - 75);
-    final head = Offset(size.width * 0.50, shoulder.dy - 16);
-
-    final handLeft = Offset(size.width * 0.40 - spread, shoulder.dy - (progress * 25));
-    final handRight = Offset(size.width * 0.60 + spread, shoulder.dy - (progress * 25));
-
-    canvas.drawLine(head, shoulder, limb);
-    canvas.drawLine(shoulder, hip, limb);
-    canvas.drawLine(hip, footLeft, limb);
-    canvas.drawLine(hip, footRight, limb);
-    canvas.drawLine(shoulder, handLeft, limb);
-    canvas.drawLine(shoulder, handRight, limb);
-
-    canvas.drawCircle(head, 9, joint);
-    canvas.drawCircle(shoulder, 4, joint);
-    canvas.drawCircle(hip, 4, joint);
-  }
-
-  void _drawYoga(Canvas canvas, Size size, Paint limb, Paint joint) {
-    final floorY = size.height * 0.78;
-    final stretch = progress * 12.0;
-
-    final hip = Offset(size.width * 0.45, floorY - 10);
-    final feet = Offset(size.width * 0.55, floorY);
-    final shoulder = Offset(size.width * 0.45, floorY - 55);
-    final head = Offset(size.width * 0.45, shoulder.dy - 16);
-
-    final leftHand = Offset(size.width * 0.32 - stretch, shoulder.dy - 20 - stretch);
-    final rightHand = Offset(size.width * 0.58 + stretch, shoulder.dy - 20 - stretch);
-
-    canvas.drawLine(head, shoulder, limb);
-    canvas.drawLine(shoulder, hip, limb);
-    canvas.drawLine(hip, feet, limb);
-    canvas.drawLine(shoulder, leftHand, limb);
-    canvas.drawLine(shoulder, rightHand, limb);
-
-    canvas.drawCircle(head, 9, joint);
-    canvas.drawCircle(shoulder, 4, joint);
-    canvas.drawCircle(hip, 4, joint);
-    canvas.drawCircle(leftHand, 4, joint);
-    canvas.drawCircle(rightHand, 4, joint);
-  }
-
-  void _drawDumbbell(Canvas canvas, Offset handPos, {double angle = 0, double size = 15}) {
-    canvas.save();
-    canvas.translate(handPos.dx, handPos.dy);
-    canvas.rotate(angle);
-
-    final barPaint = Paint()
-      ..color = Colors.white70
-      ..strokeWidth = 2.5
-      ..strokeCap = StrokeCap.round;
-    canvas.drawLine(Offset(-size / 2, 0), Offset(size / 2, 0), barPaint);
-
-    final weightPaint = Paint()
-      ..color = const Color(0xFFFF9F0A)
-      ..style = PaintingStyle.fill;
-
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        Rect.fromCenter(center: Offset(-size / 2, 0), width: 4.5, height: 11),
-        const Radius.circular(2),
-      ),
-      weightPaint,
-    );
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        Rect.fromCenter(center: Offset(size / 2, 0), width: 4.5, height: 11),
-        const Radius.circular(2),
-      ),
-      weightPaint,
-    );
-    canvas.restore();
-  }
-
-  void _drawDumbbellCurl(Canvas canvas, Size size, Paint limb, Paint joint) {
-    final floorY = size.height * 0.78;
-    final curl = progress;
-
-    final feet = Offset(size.width * 0.50, floorY);
-    final knee = Offset(size.width * 0.50, floorY - 32);
-    final hip = Offset(size.width * 0.50, floorY - 58);
-    final shoulder = Offset(size.width * 0.50, hip.dy - 30);
-    final head = Offset(size.width * 0.50, shoulder.dy - 16);
-
-    canvas.drawLine(head, shoulder, limb);
-    canvas.drawLine(shoulder, hip, limb);
-    canvas.drawLine(hip, knee, limb);
-    canvas.drawLine(knee, feet, limb);
-
-    final leftElbow = Offset(shoulder.dx - 14, shoulder.dy + 22);
-    final rightElbow = Offset(shoulder.dx + 14, shoulder.dy + 22);
-
-    final handY = (shoulder.dy + 38) - curl * 32;
-    final handXOffset = 18 - curl * 6;
-    final leftHand = Offset(shoulder.dx - handXOffset, handY);
-    final rightHand = Offset(shoulder.dx + handXOffset, handY);
-
-    canvas.drawLine(shoulder, leftElbow, limb);
-    canvas.drawLine(leftElbow, leftHand, limb);
-    canvas.drawLine(shoulder, rightElbow, limb);
-    canvas.drawLine(rightElbow, rightHand, limb);
-
-    canvas.drawCircle(head, 9, joint);
-    canvas.drawCircle(shoulder, 4, joint);
-    canvas.drawCircle(hip, 4, joint);
-    canvas.drawCircle(leftElbow, 3, joint);
-    canvas.drawCircle(rightElbow, 3, joint);
-
-    _drawDumbbell(canvas, leftHand, angle: curl * 0.3);
-    _drawDumbbell(canvas, rightHand, angle: -curl * 0.3);
-  }
-
-  void _drawDumbbellShoulderPress(Canvas canvas, Size size, Paint limb, Paint joint) {
-    final floorY = size.height * 0.78;
-    final press = progress;
-
-    final feet = Offset(size.width * 0.50, floorY);
-    final knee = Offset(size.width * 0.50, floorY - 32);
-    final hip = Offset(size.width * 0.50, floorY - 58);
-    final shoulder = Offset(size.width * 0.50, hip.dy - 30);
-    final head = Offset(size.width * 0.50, shoulder.dy - 16);
-
-    canvas.drawLine(head, shoulder, limb);
-    canvas.drawLine(shoulder, hip, limb);
-    canvas.drawLine(hip, knee, limb);
-    canvas.drawLine(knee, feet, limb);
-
-    final earY = shoulder.dy - 4;
-    final overheadY = head.dy - 16;
-    final currentY = earY - press * (earY - overheadY);
-
-    final leftHand = Offset(shoulder.dx - 22 + press * 6, currentY);
-    final rightHand = Offset(shoulder.dx + 22 - press * 6, currentY);
-
-    final leftElbow = Offset(shoulder.dx - 20, shoulder.dy + 12 - press * 16);
-    final rightElbow = Offset(shoulder.dx + 20, shoulder.dy + 12 - press * 16);
-
-    canvas.drawLine(shoulder, leftElbow, limb);
-    canvas.drawLine(leftElbow, leftHand, limb);
-    canvas.drawLine(shoulder, rightElbow, limb);
-    canvas.drawLine(rightElbow, rightHand, limb);
-
-    canvas.drawCircle(head, 9, joint);
-    canvas.drawCircle(shoulder, 4, joint);
-    canvas.drawCircle(hip, 4, joint);
-    canvas.drawCircle(leftElbow, 3, joint);
-    canvas.drawCircle(rightElbow, 3, joint);
-
-    _drawDumbbell(canvas, leftHand, angle: 0);
-    _drawDumbbell(canvas, rightHand, angle: 0);
-  }
-
-  void _drawDumbbellFloorPress(Canvas canvas, Size size, Paint limb, Paint joint) {
-    final floorY = size.height * 0.78;
-    final press = progress;
-
-    final head = Offset(size.width * 0.25, floorY - 8);
-    final shoulder = Offset(size.width * 0.35, floorY - 8);
-    final hip = Offset(size.width * 0.55, floorY - 8);
-    final knee = Offset(size.width * 0.68, floorY - 32);
-    final feet = Offset(size.width * 0.76, floorY);
-
-    canvas.drawLine(head, shoulder, limb);
-    canvas.drawLine(shoulder, hip, limb);
-    canvas.drawLine(hip, knee, limb);
-    canvas.drawLine(knee, feet, limb);
-
-    final handY = floorY - 18 - (press * 28);
-    final elbow = Offset(size.width * 0.36, floorY - (press * 14));
-    final hand = Offset(size.width * 0.38, handY);
-
-    canvas.drawLine(shoulder, elbow, limb);
-    canvas.drawLine(elbow, hand, limb);
-
-    canvas.drawCircle(head, 9, joint);
-    canvas.drawCircle(shoulder, 4, joint);
-    canvas.drawCircle(hip, 4, joint);
-    canvas.drawCircle(knee, 4, joint);
-    canvas.drawCircle(feet, 4, joint);
-    canvas.drawCircle(elbow, 3, joint);
-
-    _drawDumbbell(canvas, hand, angle: 0);
-  }
-
-  void _drawDumbbellRow(Canvas canvas, Size size, Paint limb, Paint joint) {
-    final floorY = size.height * 0.78;
-    final pull = progress;
-
-    final feet = Offset(size.width * 0.40, floorY);
-    final knee = Offset(size.width * 0.44, floorY - 26);
-    final hip = Offset(size.width * 0.40, floorY - 48);
-    final shoulder = Offset(size.width * 0.60, floorY - 60);
-    final head = Offset(size.width * 0.68, floorY - 65);
-
-    canvas.drawLine(head, shoulder, limb);
-    canvas.drawLine(shoulder, hip, limb);
-    canvas.drawLine(hip, knee, limb);
-    canvas.drawLine(knee, feet, limb);
-
-    final handHangY = floorY - 26;
-    final handPullY = floorY - 50;
-    final handY = handHangY - pull * (handHangY - handPullY);
-    final elbow = Offset(size.width * 0.50, floorY - 40 - (pull * 22));
-    final hand = Offset(size.width * 0.54, handY);
-
-    canvas.drawLine(shoulder, elbow, limb);
-    canvas.drawLine(elbow, hand, limb);
-
-    canvas.drawCircle(head, 9, joint);
-    canvas.drawCircle(shoulder, 4, joint);
-    canvas.drawCircle(hip, 4, joint);
-    canvas.drawCircle(knee, 4, joint);
-    canvas.drawCircle(elbow, 3, joint);
-
-    _drawDumbbell(canvas, hand, angle: 0.3);
-  }
-
-  void _drawDumbbellLateralRaise(Canvas canvas, Size size, Paint limb, Paint joint) {
-    final floorY = size.height * 0.78;
-    final raise = progress;
-
-    final feet = Offset(size.width * 0.50, floorY);
-    final knee = Offset(size.width * 0.50, floorY - 32);
-    final hip = Offset(size.width * 0.50, floorY - 58);
-    final shoulder = Offset(size.width * 0.50, hip.dy - 30);
-    final head = Offset(size.width * 0.50, shoulder.dy - 16);
-
-    canvas.drawLine(head, shoulder, limb);
-    canvas.drawLine(shoulder, hip, limb);
-    canvas.drawLine(hip, knee, limb);
-    canvas.drawLine(knee, feet, limb);
-
-    final armLength = 32.0;
-    final angle = math.pi * 0.5 * (1.0 - raise);
-    final leftHand = Offset(shoulder.dx - math.cos(angle) * armLength - 8, shoulder.dy + math.sin(angle) * armLength);
-    final rightHand = Offset(shoulder.dx + math.cos(angle) * armLength + 8, shoulder.dy + math.sin(angle) * armLength);
-
-    canvas.drawLine(shoulder, leftHand, limb);
-    canvas.drawLine(shoulder, rightHand, limb);
-
-    canvas.drawCircle(head, 9, joint);
-    canvas.drawCircle(shoulder, 4, joint);
-    canvas.drawCircle(hip, 4, joint);
-
-    _drawDumbbell(canvas, leftHand, angle: 0.2);
-    _drawDumbbell(canvas, rightHand, angle: -0.2);
-  }
-
-  void _drawDumbbellRDL(Canvas canvas, Size size, Paint limb, Paint joint) {
-    final floorY = size.height * 0.78;
-    final hinge = progress;
-
-    final feet = Offset(size.width * 0.44, floorY);
-    final knee = Offset(size.width * 0.42, floorY - 28);
-    final hipX = size.width * 0.38 - (hinge * 12);
-    final hipY = floorY - 54 + (hinge * 6);
-    final hip = Offset(hipX, hipY);
-
-    final shoulderX = size.width * 0.48 + (hinge * 18);
-    final shoulderY = hip.dy - 30 + (hinge * 24);
-    final shoulder = Offset(shoulderX, shoulderY);
-    final head = Offset(shoulder.dx + 12, shoulder.dy - 10);
-
-    canvas.drawLine(head, shoulder, limb);
-    canvas.drawLine(shoulder, hip, limb);
-    canvas.drawLine(hip, knee, limb);
-    canvas.drawLine(knee, feet, limb);
-
-    final handY = shoulder.dy + 28;
-    final hand = Offset(shoulder.dx - 2, handY);
-    canvas.drawLine(shoulder, hand, limb);
-
-    canvas.drawCircle(head, 9, joint);
-    canvas.drawCircle(shoulder, 4, joint);
-    canvas.drawCircle(hip, 4, joint);
-    canvas.drawCircle(knee, 4, joint);
-
-    _drawDumbbell(canvas, hand, angle: 0.15);
-  }
-
-  void _drawDumbbellTriceps(Canvas canvas, Size size, Paint limb, Paint joint) {
-    final floorY = size.height * 0.78;
-    final extend = progress;
-
-    final feet = Offset(size.width * 0.50, floorY);
-    final knee = Offset(size.width * 0.50, floorY - 32);
-    final hip = Offset(size.width * 0.50, floorY - 58);
-    final shoulder = Offset(size.width * 0.50, hip.dy - 30);
-    final head = Offset(size.width * 0.50, shoulder.dy - 16);
-
-    canvas.drawLine(head, shoulder, limb);
-    canvas.drawLine(shoulder, hip, limb);
-    canvas.drawLine(hip, knee, limb);
-    canvas.drawLine(knee, feet, limb);
-
-    final elbow = Offset(shoulder.dx + 6, head.dy - 4);
-    final handY = (head.dy + 8) - extend * 28;
-    final hand = Offset(shoulder.dx - 4 + extend * 10, handY);
-
-    canvas.drawLine(shoulder, elbow, limb);
-    canvas.drawLine(elbow, hand, limb);
-
-    canvas.drawCircle(head, 9, joint);
-    canvas.drawCircle(shoulder, 4, joint);
-    canvas.drawCircle(hip, 4, joint);
-    canvas.drawCircle(elbow, 3, joint);
-
-    _drawDumbbell(canvas, hand, angle: math.pi * 0.5);
-  }
-
-  void _drawGluteBridgeWithDumbbell(Canvas canvas, Size size, Paint limb, Paint joint) {
-    _drawGluteBridge(canvas, size, limb, joint);
-    final floorY = size.height * 0.78;
-    final bridgeLift = progress * 30.0;
-    final hip = Offset(size.width * 0.45, floorY - 12 - bridgeLift);
-    _drawDumbbell(canvas, Offset(hip.dx, hip.dy - 8), angle: 0, size: 18);
-  }
-
-  void _drawSquatWithDumbbell(Canvas canvas, Size size, Paint limb, Paint joint) {
-    _drawSquat(canvas, size, limb, joint);
-    final floorY = size.height * 0.78;
-    final squatDepth = progress * 28.0;
-    final hip = Offset(size.width * 0.42 - (progress * 10), floorY - 58 + squatDepth);
-    final shoulder = Offset(size.width * 0.47, hip.dy - 30);
-    final hand = Offset(size.width * 0.65, shoulder.dy + 8);
-    _drawDumbbell(canvas, hand, angle: 0.1, size: 17);
-  }
-
-  @override
-  bool shouldRepaint(covariant _PosePainter oldDelegate) {
-    return oldDelegate.progress != progress ||
-        oldDelegate.exerciseTitle != exerciseTitle;
   }
 }

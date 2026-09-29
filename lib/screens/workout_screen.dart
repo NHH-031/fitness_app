@@ -1154,6 +1154,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
                     ExercisePoseAnimator(
                       exerciseTitle: ex.title,
                       height: 135,
+                      isMale: _isMale,
                     ),
                     const SizedBox(height: 10),
                     Row(
@@ -1188,7 +1189,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
                         ),
                         const SizedBox(width: 8),
                         InkWell(
-                          onTap: () => ExerciseGuideSheet.show(context, exerciseTitle: ex.title),
+                          onTap: () => ExerciseGuideSheet.show(context, exerciseTitle: ex.title, isMale: _isMale),
                           borderRadius: BorderRadius.circular(8),
                           child: Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
@@ -1248,6 +1249,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
                               targetReps: setupResult.targetReps,
                               weightKg: setupResult.weightKg,
                               restDurationSeconds: ex.restSeconds,
+                              isMale: _isMale,
                             ),
                           ),
                         );

@@ -23,6 +23,7 @@ class ActiveWorkoutScreen extends StatefulWidget {
   final int targetReps;
   final double? weightKg;
   final int restDurationSeconds;
+  final bool? isMale;
 
   const ActiveWorkoutScreen({
     super.key,
@@ -36,6 +37,7 @@ class ActiveWorkoutScreen extends StatefulWidget {
     this.targetReps = 12,
     this.weightKg,
     this.restDurationSeconds = 60,
+    this.isMale,
   });
 
   @override
@@ -69,6 +71,7 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> {
   Map<String, dynamic>? _lastWorkoutLog;
   double? _personalRecordWeight;
   bool _isNewPR = false;
+  bool _isMale = true;
 
   bool get _hasWeight =>
       (_equipment == 'dumbbell' || ExerciseGuideData.getForExercise(_currentTitle).isDumbbell) &&
@@ -160,7 +163,21 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> {
     if (!_isRepsMode) {
       _startTimer();
     }
+    if (widget.isMale != null) {
+      _isMale = widget.isMale!;
+    } else {
+      _loadUserGender();
+    }
     _loadProgressiveOverloadData();
+  }
+
+  Future<void> _loadUserGender() async {
+    final profile = await StorageService.getUserProfile();
+    if (mounted) {
+      setState(() {
+        _isMale = profile.gender != 'female';
+      });
+    }
   }
 
   Future<void> _loadProgressiveOverloadData() async {
@@ -689,7 +706,7 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> {
             IconButton(
               tooltip: 'Kỹ thuật chuẩn & Lỗi sai',
               icon: const Icon(Icons.help_outline_rounded, color: Color(0xFF00F0FF), size: 22),
-              onPressed: () => ExerciseGuideSheet.show(context, exerciseTitle: _currentTitle),
+              onPressed: () => ExerciseGuideSheet.show(context, exerciseTitle: _currentTitle, isMale: _isMale),
             ),
             Padding(
               padding: const EdgeInsets.only(right: 12.0),
@@ -785,6 +802,7 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> {
                     exerciseTitle: _currentTitle,
                     isPlaying: _isRunning && !_isResting,
                     height: 155,
+                    isMale: _isMale,
                   ),
 
                   const SizedBox(height: 14),

@@ -752,6 +752,7 @@ class _MuscleAnatomyMapWidgetState extends State<MuscleAnatomyMapWidget> {
                               : (currentSelected.category == 'legs'
                                   ? 'Cơ đùi, Cơ mông, Khớp gối & hông'
                                   : 'Cơ lõi, Cơ lưng, Cẳng tay'),
+                          isMale: _isMale,
                         );
                       },
                       borderRadius: BorderRadius.circular(10),
@@ -818,6 +819,7 @@ class _MuscleAnatomyMapWidgetState extends State<MuscleAnatomyMapWidget> {
                                 : (currentSelected.category == 'legs'
                                     ? 'Cơ đùi, Cơ mông, Khớp gối & hông'
                                     : 'Cơ lõi, Cơ lưng, Cẳng tay'),
+                            isMale: _isMale,
                           );
                         },
                         borderRadius: BorderRadius.circular(8),
