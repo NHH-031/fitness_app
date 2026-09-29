@@ -312,6 +312,6 @@ android/
 ---
 
 ## 👥 Tác giả & Đóng góp
-- **Tác giả / Nhà phát triển**: Nguyễn Hữu Hoàng ([NHH-031](https://github.com/NHH-031))
+- **Tác giả / Nhà phát triển**: Nguyễn Huy Hoàng ([NHH-031](https://github.com/NHH-031))
 - **Dự án**: [Fitness Tracker](https://github.com/NHH-031/fitness_app)
 - **Bản quyền**: Phát hành theo giấy phép mã nguồn mở MIT License.
