@@ -2,12 +2,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:fitness_tracker/database/app_database.dart';
 import 'package:fitness_tracker/models/favorite_food.dart';
 import 'package:fitness_tracker/models/body_measurement.dart';
-import 'package:fitness_tracker/repositories/nutrition_repository.dart';
-import 'package:fitness_tracker/repositories/workout_repository.dart';
 import 'package:fitness_tracker/repositories/body_measurement_repository.dart';
 import 'package:fitness_tracker/services/biometric_service.dart';
 import 'package:fitness_tracker/services/report_export_service.dart';
-import 'package:fitness_tracker/services/user_metrics_service.dart';
 import 'package:fitness_tracker/services/storage_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
