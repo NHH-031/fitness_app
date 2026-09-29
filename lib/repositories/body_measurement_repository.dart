@@ -1,19 +1,24 @@
 import 'package:sqflite/sqflite.dart';
 import '../database/app_database.dart';
 import '../models/body_measurement.dart';
+import '../services/firestore_service.dart';
 
 class BodyMeasurementRepository {
   BodyMeasurementRepository._();
   static final BodyMeasurementRepository instance = BodyMeasurementRepository._();
 
-  /// Lưu hoặc cập nhật số đo cơ thể vào SQLite
-  Future<void> saveMeasurement(BodyMeasurement measurement) async {
+  /// Lưu hoặc cập nhật số đo cơ thể vào SQLite và đẩy lên Firestore
+  Future<void> saveMeasurement(BodyMeasurement measurement, {bool syncToFirestore = true}) async {
     final db = await AppDatabase.instance.database;
     await db.insert(
       'body_measurements',
       measurement.toMap(),
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
+
+    if (syncToFirestore) {
+      await FirestoreService().saveBodyMeasurement(measurement);
+    }
   }
 
   /// Lấy toàn bộ lịch sử các lần đo, mới nhất xếp trước
@@ -39,13 +44,17 @@ class BodyMeasurementRepository {
   }
 
   /// Xóa bản ghi số đo theo ID
-  Future<void> deleteMeasurement(String id) async {
+  Future<void> deleteMeasurement(String id, {bool syncToFirestore = true}) async {
     final db = await AppDatabase.instance.database;
     await db.delete(
       'body_measurements',
       where: 'id = ?',
       whereArgs: [id],
     );
+
+    if (syncToFirestore) {
+      await FirestoreService().deleteBodyMeasurement(id);
+    }
   }
 
   /// Xóa toàn bộ số đo

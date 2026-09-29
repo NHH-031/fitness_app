@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'firestore_service.dart';
 
 class BiometricService {
   BiometricService._();
@@ -60,9 +61,10 @@ class BiometricService {
     return prefs.getBool(_prefKeyAppLock) ?? false;
   }
 
-  /// Bật / Tắt khóa ứng dụng bằng sinh trắc học
+  /// Bật / Tắt khóa ứng dụng bằng sinh trắc học và đồng bộ Firestore
   Future<void> setAppLockEnabled(bool enabled) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_prefKeyAppLock, enabled);
+    await FirestoreService().saveAppLockSetting(enabled);
   }
 }

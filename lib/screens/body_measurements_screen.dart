@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/body_measurement.dart';
 import '../models/user_profile.dart';
 import '../repositories/body_measurement_repository.dart';
+import '../services/firestore_service.dart';
 import '../services/locale_service.dart';
 import '../services/storage_service.dart';
 import '../theme.dart';
@@ -120,9 +121,11 @@ class _BodyMeasurementsScreenState extends State<BodyMeasurementsScreen> {
       if (isBefore) {
         await prefs.setString(_prefKeyBefore, savedFile.path);
         setState(() => _beforeImagePath = savedFile.path);
+        FirestoreService().saveBodyPhotosMeta(beforePhotoPath: savedFile.path);
       } else {
         await prefs.setString(_prefKeyAfter, savedFile.path);
         setState(() => _afterImagePath = savedFile.path);
+        FirestoreService().saveBodyPhotosMeta(afterPhotoPath: savedFile.path);
       }
 
       AppHaptics.success();

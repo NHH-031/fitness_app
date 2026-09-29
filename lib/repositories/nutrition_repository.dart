@@ -200,24 +200,32 @@ class NutritionRepository {
     return results.map((row) => FavoriteFood.fromMap(row)).toList();
   }
 
-  /// Thêm một món ăn vào danh mục ưa thích
-  Future<void> addFavoriteFood(FavoriteFood food) async {
+  /// Thêm một món ăn vào danh mục ưa thích (lưu SQLite và đồng bộ Firestore)
+  Future<void> addFavoriteFood(FavoriteFood food, {bool syncToFirestore = true}) async {
     final db = await AppDatabase.instance.database;
     await db.insert(
       'favorite_foods',
       food.toMap(),
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
+
+    if (syncToFirestore) {
+      await FirestoreService().saveFavoriteFood(food);
+    }
   }
 
-  /// Xóa một món ăn khỏi danh mục ưa thích
-  Future<void> deleteFavoriteFood(String id) async {
+  /// Xóa một món ăn khỏi danh mục ưa thích (xóa SQLite và xóa trên Firestore)
+  Future<void> deleteFavoriteFood(String id, {bool syncToFirestore = true}) async {
     final db = await AppDatabase.instance.database;
     await db.delete(
       'favorite_foods',
       where: 'id = ?',
       whereArgs: [id],
     );
+
+    if (syncToFirestore) {
+      await FirestoreService().deleteFavoriteFood(id);
+    }
   }
 
   /// Kiểm tra xem món ăn theo tên đã có trong mục ưa thích chưa

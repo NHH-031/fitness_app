@@ -5,6 +5,9 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user_profile.dart';
 import '../models/chat_message.dart';
+import '../models/body_measurement.dart';
+import '../models/favorite_food.dart';
+import '../repositories/body_measurement_repository.dart';
 import 'storage_service.dart';
 
 class FirestoreService {
@@ -279,6 +282,136 @@ class FirestoreService {
     } catch (e) {
       debugPrint('Firestore clearChatHistory error: $e');
     }
+  }
+
+  // --- BODY MEASUREMENTS (SỐ ĐO CƠ THỂ & % MỠ) ---
+
+  Future<void> saveBodyMeasurement(BodyMeasurement measurement) async {
+    final doc = _userDoc;
+    if (doc == null) return;
+    try {
+      await doc
+          .collection('body_measurements')
+          .doc(measurement.id)
+          .set(measurement.toMap(), SetOptions(merge: true));
+      debugPrint('Firestore saveBodyMeasurement: ${measurement.id} saved');
+    } catch (e) {
+      debugPrint('Firestore saveBodyMeasurement error: $e');
+    }
+  }
+
+  Future<void> deleteBodyMeasurement(String id) async {
+    final doc = _userDoc;
+    if (doc == null) return;
+    try {
+      await doc.collection('body_measurements').doc(id).delete();
+      debugPrint('Firestore deleteBodyMeasurement: $id deleted');
+    } catch (e) {
+      debugPrint('Firestore deleteBodyMeasurement error: $e');
+    }
+  }
+
+  Future<List<BodyMeasurement>> getBodyMeasurements() async {
+    final doc = _userDoc;
+    if (doc == null) return [];
+    try {
+      final querySnapshot = await doc
+          .collection('body_measurements')
+          .orderBy('date', descending: true)
+          .get();
+      return querySnapshot.docs.map((d) => BodyMeasurement.fromMap(d.data())).toList();
+    } catch (e) {
+      debugPrint('Firestore getBodyMeasurements error: $e');
+      return [];
+    }
+  }
+
+  // --- BODY PHOTOS METADATA (ẢNH BEFORE / AFTER) ---
+
+  Future<void> saveBodyPhotosMeta({String? beforePhotoPath, String? afterPhotoPath}) async {
+    final doc = _userDoc;
+    if (doc == null) return;
+    try {
+      final data = <String, dynamic>{
+        'updatedAt': FieldValue.serverTimestamp(),
+      };
+      if (beforePhotoPath != null) data['beforePhotoPath'] = beforePhotoPath;
+      if (afterPhotoPath != null) data['afterPhotoPath'] = afterPhotoPath;
+      await doc.collection('body_measurements').doc('photo_meta').set(data, SetOptions(merge: true));
+    } catch (e) {
+      debugPrint('Firestore saveBodyPhotosMeta error: $e');
+    }
+  }
+
+  // --- FAVORITE FOODS (MÓN ĂN QUEN THUỘC) ---
+
+  Future<void> saveFavoriteFood(FavoriteFood food) async {
+    final doc = _userDoc;
+    if (doc == null) return;
+    try {
+      await doc
+          .collection('favorite_foods')
+          .doc(food.id)
+          .set(food.toMap(), SetOptions(merge: true));
+      debugPrint('Firestore saveFavoriteFood: ${food.name} saved');
+    } catch (e) {
+      debugPrint('Firestore saveFavoriteFood error: $e');
+    }
+  }
+
+  Future<void> deleteFavoriteFood(String id) async {
+    final doc = _userDoc;
+    if (doc == null) return;
+    try {
+      await doc.collection('favorite_foods').doc(id).delete();
+      debugPrint('Firestore deleteFavoriteFood: $id deleted');
+    } catch (e) {
+      debugPrint('Firestore deleteFavoriteFood error: $e');
+    }
+  }
+
+  Future<List<FavoriteFood>> getFavoriteFoods() async {
+    final doc = _userDoc;
+    if (doc == null) return [];
+    try {
+      final querySnapshot = await doc
+          .collection('favorite_foods')
+          .orderBy('created_at', descending: true)
+          .get();
+      return querySnapshot.docs.map((d) => FavoriteFood.fromMap(d.data())).toList();
+    } catch (e) {
+      debugPrint('Firestore getFavoriteFoods error: $e');
+      return [];
+    }
+  }
+
+  // --- SECURITY & BIOMETRIC SETTINGS ---
+
+  Future<void> saveAppLockSetting(bool enabled) async {
+    final doc = _userDoc;
+    if (doc == null) return;
+    try {
+      await doc.collection('settings').doc('security').set({
+        'appLockEnabled': enabled,
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+    } catch (e) {
+      debugPrint('Firestore saveAppLockSetting error: $e');
+    }
+  }
+
+  Future<bool?> getAppLockSetting() async {
+    final doc = _userDoc;
+    if (doc == null) return null;
+    try {
+      final snap = await doc.collection('settings').doc('security').get();
+      if (snap.exists && snap.data() != null) {
+        return snap.data()!['appLockEnabled'] as bool?;
+      }
+    } catch (e) {
+      debugPrint('Firestore getAppLockSetting error: $e');
+    }
+    return null;
   }
 
   // --- COMPREHENSIVE 2-WAY SYNC (ĐỒNG BỘ 2 CHIỀU GIỮA LOCAL VÀ CLOUD) ---
@@ -577,6 +710,69 @@ class FirestoreService {
       final mergedChats = chatMap.values.toList();
       mergedChats.sort((a, b) => a.timestamp.compareTo(b.timestamp));
       await StorageService.saveMultipleLocalChatMessages(mergedChats);
+
+      // 8. Body Measurements 2-Way Merge (Số đo cơ thể & % mỡ)
+      try {
+        final localMeasurements = await BodyMeasurementRepository.instance.getMeasurements();
+        final cloudMeasurements = await getBodyMeasurements();
+        final Map<String, BodyMeasurement> measurementMap = {};
+        for (final m in cloudMeasurements) {
+          measurementMap[m.id] = m;
+        }
+        for (final m in localMeasurements) {
+          if (!measurementMap.containsKey(m.id)) {
+            measurementMap[m.id] = m;
+            final mDoc = doc.collection('body_measurements').doc(m.id);
+            batch.set(mDoc, m.toMap(), SetOptions(merge: true));
+            opCount++;
+            await commitBatchIfNeeded();
+          }
+        }
+        for (final m in measurementMap.values) {
+          await BodyMeasurementRepository.instance.saveMeasurement(m, syncToFirestore: false);
+        }
+      } catch (e) {
+        debugPrint('Sync body measurements error: $e');
+      }
+
+      // 9. Favorite Foods 2-Way Merge (Món ăn quen thuộc)
+      try {
+        final localFavorites = await NutritionRepository.instance.getFavoriteFoods();
+        final cloudFavorites = await getFavoriteFoods();
+        final Map<String, FavoriteFood> favoriteMap = {};
+        for (final f in cloudFavorites) {
+          favoriteMap[f.id] = f;
+        }
+        for (final f in localFavorites) {
+          if (!favoriteMap.containsKey(f.id)) {
+            favoriteMap[f.id] = f;
+            final fDoc = doc.collection('favorite_foods').doc(f.id);
+            batch.set(fDoc, f.toMap(), SetOptions(merge: true));
+            opCount++;
+            await commitBatchIfNeeded();
+          }
+        }
+        for (final f in favoriteMap.values) {
+          await NutritionRepository.instance.addFavoriteFood(f, syncToFirestore: false);
+        }
+      } catch (e) {
+        debugPrint('Sync favorite foods error: $e');
+      }
+
+      // 10. Security settings sync (App lock)
+      try {
+        final cloudAppLock = await getAppLockSetting();
+        if (cloudAppLock != null) {
+          await prefs.setBool('biometric_app_lock_enabled', cloudAppLock);
+        } else {
+          final localAppLock = prefs.getBool('biometric_app_lock_enabled');
+          if (localAppLock != null) {
+            await saveAppLockSetting(localAppLock);
+          }
+        }
+      } catch (e) {
+        debugPrint('Sync app lock error: $e');
+      }
 
       if (opCount > 0) {
         await batch.commit();
