@@ -804,27 +804,46 @@ class _MuscleAnatomyMapWidgetState extends State<MuscleAnatomyMapWidget> {
                   spacing: 8,
                   runSpacing: 8,
                   children: currentSelected.primaryExercises.map((exercise) {
-                    return Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.05),
+                    return Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: () {
+                          AppHaptics.light();
+                          ExerciseGuideSheet.show(
+                            context,
+                            exerciseTitle: exercise,
+                            targetMuscle: currentSelected.nameVi,
+                            secondaryMuscles: currentSelected.category == 'chest'
+                                ? 'Tay sau (Triceps), Vai trước (Anterior Deltoid)'
+                                : (currentSelected.category == 'legs'
+                                    ? 'Cơ đùi, Cơ mông, Khớp gối & hông'
+                                    : 'Cơ lõi, Cơ lưng, Cẳng tay'),
+                          );
+                        },
                         borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.white12),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.north_east_rounded, size: 12, color: activeColor),
-                          const SizedBox(width: 4),
-                          Text(
-                            exercise,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                            ),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.05),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.white12),
                           ),
-                        ],
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.north_east_rounded, size: 12, color: activeColor),
+                              const SizedBox(width: 4),
+                              Text(
+                                exercise,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
                     );
                   }).toList(),
