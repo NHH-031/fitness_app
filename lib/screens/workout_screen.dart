@@ -891,8 +891,15 @@ class _WorkoutScreenState extends State<WorkoutScreen> {
 
             const SizedBox(height: 24),
 
-            // 4. Interactive Muscle Anatomy Map (v2.0)
-            const MuscleAnatomyMapWidget(),
+            // 4. Interactive Muscle Anatomy Map (v2.0) with Male & Female Support
+            MuscleAnatomyMapWidget(
+              initialIsMale: _isMale,
+              onGenderChanged: (isMale) {
+                setState(() {
+                  _isMale = isMale;
+                });
+              },
+            ),
 
             const SizedBox(height: 28),
 
