@@ -689,10 +689,10 @@ class _ExercisePoseAnimatorState extends State<ExercisePoseAnimator>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1700),
+      duration: const Duration(milliseconds: 2700),
     );
     if (widget.isPlaying) {
-      _controller.repeat(reverse: true);
+      _controller.repeat();
     }
   }
 
@@ -701,7 +701,7 @@ class _ExercisePoseAnimatorState extends State<ExercisePoseAnimator>
     super.didUpdateWidget(oldWidget);
     if (widget.isPlaying != oldWidget.isPlaying) {
       if (widget.isPlaying) {
-        _controller.repeat(reverse: true);
+        _controller.repeat();
       } else {
         _controller.stop();
       }
@@ -719,10 +719,16 @@ class _ExercisePoseAnimatorState extends State<ExercisePoseAnimator>
     final activeThemeColor = widget.isMale
         ? const Color(0xFF00F0FF)
         : const Color(0xFFFF2E93);
+    final exType = AnatomyKinematicPainter.resolveExerciseType(widget.exerciseTitle);
 
     return AnimatedBuilder(
       animation: _controller,
       builder: (context, child) {
+        final smoothPhase = AnatomyKinematicPainter.computeBiomechanicalPhase(
+          _controller.value,
+          exType,
+        );
+
         return Container(
           height: widget.height,
           width: double.infinity,
@@ -749,7 +755,7 @@ class _ExercisePoseAnimatorState extends State<ExercisePoseAnimator>
                 Positioned.fill(
                   child: CustomPaint(
                     painter: AnatomyKinematicPainter(
-                      progress: _controller.value,
+                      progress: smoothPhase,
                       exerciseTitle: widget.exerciseTitle,
                       isMale: widget.isMale,
                     ),

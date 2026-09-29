@@ -232,6 +232,55 @@ class AnatomyKinematicPainter extends CustomPainter {
     }
   }
 
+  /// Chuyển đổi tiến trình chu kỳ lặp (0.0 -> 1.0) sang pha động học biomechanical mượt mà:
+  /// - Giai đoạn 1 (0.00 -> 0.08): Chuẩn bị / Khóa khớp tư thế ban đầu (Ready stance, phase = 0.0)
+  /// - Giai đoạn 2 (0.08 -> 0.46): Hạ tạ / Xuống tấn (Eccentric, cubic ease-in-out mượt mà, phase = 0.0 -> 1.0)
+  /// - Giai đoạn 3 (0.46 -> 0.58): Giữ tĩnh quan sát đỉnh co cơ (Peak Isometric hold, phase = 1.0)
+  /// - Giai đoạn 4 (0.58 -> 0.90): Đẩy lên / Co cơ phát lực (Concentric, cubic ease mượt mà, phase = 1.0 -> 0.0)
+  /// - Giai đoạn 5 (0.90 -> 1.00): Khóa khớp & điều hòa nhịp thở (Lockout & reset breath, phase = 0.0)
+  static double computeBiomechanicalPhase(double cycleT, AnatomyExerciseType type) {
+    final t = cycleT.clamp(0.0, 1.0);
+
+    // Đối với các bài tập nhịp điệu Cardio/Mobility luân phiên liên tục
+    switch (type) {
+      case AnatomyExerciseType.mountainClimber:
+        // Đạp gối luân phiên liên tục dạng sóng sin điều hòa
+        return 0.5 - 0.5 * math.cos(t * math.pi * 2);
+      case AnatomyExerciseType.jumpingJack:
+        // Nhảy mở rộng và khép lại mượt mà
+        return 0.5 - 0.5 * math.cos(t * math.pi * 2);
+      case AnatomyExerciseType.plank:
+        // Đẳng trường ổn định với nhịp thở vi mô
+        return t;
+      case AnatomyExerciseType.yoga:
+      case AnatomyExerciseType.general:
+        return 0.5 - 0.5 * math.cos(t * math.pi * 2);
+      default:
+        break;
+    }
+
+    // Các bài tập kháng lực có chu kỳ Repetition chuẩn 4 pha
+    if (t < 0.08) {
+      // 1. Starting ready pose
+      return 0.0;
+    } else if (t < 0.46) {
+      // 2. Controlled eccentric descent (hạ xuống có kiểm soát)
+      final u = (t - 0.08) / 0.38;
+      // Hermite smoothstep cubic: 3u^2 - 2u^3
+      return u * u * (3.0 - 2.0 * u);
+    } else if (t < 0.58) {
+      // 3. Peak isometric hold (giữ tĩnh để người dùng quan sát form chuẩn và cơ kích hoạt)
+      return 1.0;
+    } else if (t < 0.90) {
+      // 4. Smooth concentric ascent (đẩy/kéo phát lực lên mượt mà)
+      final v = (t - 0.58) / 0.32;
+      return 1.0 - (v * v * (3.0 - 2.0 * v));
+    } else {
+      // 5. Lockout & reset stance
+      return 0.0;
+    }
+  }
+
   /// Tính toán hệ số kích hoạt cơ bắp thời gian thực (0.0 -> 1.0)
   static double getMuscleActivation(double progress, AnatomyExerciseType type, String muscleId) {
     final primary = getPrimaryMuscleId(type);
@@ -328,19 +377,22 @@ class AnatomyKinematicPainter extends CustomPainter {
         case AnatomyExerciseType.shoulderPress:
           final shoulderY = h * 0.38;
           final hipY = h * 0.58;
-          // Dumbbells move from shoulder level (p=0) to overhead (p=1)
-          final armLift = p;
-          final handY = (h * 0.36) - (h * 0.20) * armLift;
-          final handXLeft = cx - 28 + (12 * armLift);
-          final handXRight = cx + 28 - (12 * armLift);
+          final sW = isMale ? 26.0 : 22.0;
+          // Overhead press: elbows extend upward and hands press overhead
+          final handY = (h * 0.33) - (h * 0.17) * p;
+          final handXLeft = (cx - 28) + (14 * p);
+          final handXRight = (cx + 28) - (14 * p);
+          final elbowY = (h * 0.44) - (h * 0.17) * p;
+          final elbowXLeft = (cx - 32) + (12 * p);
+          final elbowXRight = (cx + 32) - (12 * p);
 
           return AnatomyKinematicJoints(
             head: Offset(cx, h * 0.22),
             neck: Offset(cx, h * 0.30),
-            shoulderNear: Offset(cx - (isMale ? 26 : 22), shoulderY),
-            shoulderFar: Offset(cx + (isMale ? 26 : 22), shoulderY),
-            elbowNear: Offset(cx - (isMale ? 30 : 25), shoulderY + 18 - (14 * armLift)),
-            elbowFar: Offset(cx + (isMale ? 30 : 25), shoulderY + 18 - (14 * armLift)),
+            shoulderNear: Offset(cx - sW, shoulderY),
+            shoulderFar: Offset(cx + sW, shoulderY),
+            elbowNear: Offset(elbowXLeft, elbowY),
+            elbowFar: Offset(elbowXRight, elbowY),
             wristNear: Offset(handXLeft, handY),
             wristFar: Offset(handXRight, handY),
             chest: Offset(cx, h * 0.40),
@@ -361,21 +413,26 @@ class AnatomyKinematicPainter extends CustomPainter {
 
         case AnatomyExerciseType.bicepCurl:
           final shoulderY = h * 0.38;
+          final sW = isMale ? 26.0 : 22.0;
           final elbowY = h * 0.52;
-          // Forearms curl upward
-          final curlY = (h * 0.65) - (h * 0.26) * p;
-          final curlXNear = cx - 18 - (2 * p);
-          final curlXFar = cx + 18 + (2 * p);
+          final elbowXLeft = cx - 20.0;
+          final elbowXRight = cx + 20.0;
+          // Forearms curl in circular arc around stable elbow joint
+          const forearmLen = 20.0;
+          final curlAngle = p * 2.45;
+          final wristY = elbowY + forearmLen * math.cos(curlAngle);
+          final wristXNear = elbowXLeft - 4.0 * math.sin(curlAngle);
+          final wristXFar = elbowXRight + 4.0 * math.sin(curlAngle);
 
           return AnatomyKinematicJoints(
             head: Offset(cx, h * 0.22),
             neck: Offset(cx, h * 0.30),
-            shoulderNear: Offset(cx - (isMale ? 26 : 22), shoulderY),
-            shoulderFar: Offset(cx + (isMale ? 26 : 22), shoulderY),
-            elbowNear: Offset(cx - 20, elbowY),
-            elbowFar: Offset(cx + 20, elbowY),
-            wristNear: Offset(curlXNear, curlY),
-            wristFar: Offset(curlXFar, curlY),
+            shoulderNear: Offset(cx - sW, shoulderY),
+            shoulderFar: Offset(cx + sW, shoulderY),
+            elbowNear: Offset(elbowXLeft, elbowY),
+            elbowFar: Offset(elbowXRight, elbowY),
+            wristNear: Offset(wristXNear, wristY),
+            wristFar: Offset(wristXFar, wristY),
             chest: Offset(cx, h * 0.40),
             midSpine: Offset(cx, h * 0.49),
             hipNear: Offset(cx - 16, h * 0.58),
@@ -388,29 +445,34 @@ class AnatomyKinematicPainter extends CustomPainter {
             footFar: Offset(cx + 20, groundY),
             viewMode: KinematicViewMode.front,
             hasDumbbells: true,
-            dumbbellNear: Offset(curlXNear, curlY),
-            dumbbellFar: Offset(curlXFar, curlY),
+            dumbbellNear: Offset(wristXNear, wristY),
+            dumbbellFar: Offset(wristXFar, wristY),
           );
 
         case AnatomyExerciseType.lateralRaise:
           final shoulderY = h * 0.38;
-          final armRaise = p;
-          final handXNear = cx - 20 - (38 * armRaise);
-          final handXFar = cx + 20 + (38 * armRaise);
-          final handY = (h * 0.64) - (h * 0.26) * armRaise;
-          final elbowXNear = cx - 20 - (20 * armRaise);
-          final elbowXFar = cx + 20 + (20 * armRaise);
-          final elbowY = (h * 0.52) - (h * 0.12) * armRaise;
+          final sW = isMale ? 26.0 : 22.0;
+          const uArmLen = 18.0;
+          const fArmLen = 17.0;
+          // Pure circular shoulder abduction arc: 12 deg (at thigh) to 87 deg (parallel to floor)
+          final alpha = 0.20 + (p * 1.32);
+          final elbowXNear = (cx - sW) - (uArmLen * math.sin(alpha));
+          final elbowXFar = (cx + sW) + (uArmLen * math.sin(alpha));
+          final elbowY = shoulderY + (uArmLen * math.cos(alpha));
+          // Soft 10 degree elbow bend
+          final wristXNear = elbowXNear - (fArmLen * math.sin(alpha + 0.14));
+          final wristXFar = elbowXFar + (fArmLen * math.sin(alpha + 0.14));
+          final wristY = elbowY + (fArmLen * math.cos(alpha + 0.14));
 
           return AnatomyKinematicJoints(
             head: Offset(cx, h * 0.22),
             neck: Offset(cx, h * 0.30),
-            shoulderNear: Offset(cx - (isMale ? 26 : 22), shoulderY),
-            shoulderFar: Offset(cx + (isMale ? 26 : 22), shoulderY),
+            shoulderNear: Offset(cx - sW, shoulderY),
+            shoulderFar: Offset(cx + sW, shoulderY),
             elbowNear: Offset(elbowXNear, elbowY),
             elbowFar: Offset(elbowXFar, elbowY),
-            wristNear: Offset(handXNear, handY),
-            wristFar: Offset(handXFar, handY),
+            wristNear: Offset(wristXNear, wristY),
+            wristFar: Offset(wristXFar, wristY),
             chest: Offset(cx, h * 0.40),
             midSpine: Offset(cx, h * 0.49),
             hipNear: Offset(cx - 16, h * 0.58),
@@ -423,23 +485,27 @@ class AnatomyKinematicPainter extends CustomPainter {
             footFar: Offset(cx + 20, groundY),
             viewMode: KinematicViewMode.front,
             hasDumbbells: true,
-            dumbbellNear: Offset(handXNear, handY),
-            dumbbellFar: Offset(handXFar, handY),
+            dumbbellNear: Offset(wristXNear, wristY),
+            dumbbellFar: Offset(wristXFar, wristY),
           );
 
         case AnatomyExerciseType.pullUp:
           final barY = h * 0.18;
-          // p=0 hang down; p=1 chin above bar
+          final sW = isMale ? 28.0 : 24.0;
+          // p=0 full dead hang (chin below bar); p=1 chin above bar
           final pullY = (h * 0.20) * (1.0 - p);
-          final bodyTop = barY + 16 + pullY;
+          final bodyTop = barY + 14 + pullY;
+          final elbowY = (barY + 18) + (bodyTop + 24 - (barY + 18)) * p;
+          final elbowXNear = (cx - 36) + (8 * p);
+          final elbowXFar = (cx + 36) - (8 * p);
 
           return AnatomyKinematicJoints(
             head: Offset(cx, bodyTop + 6),
             neck: Offset(cx, bodyTop + 20),
-            shoulderNear: Offset(cx - (isMale ? 28 : 24), bodyTop + 26),
-            shoulderFar: Offset(cx + (isMale ? 28 : 24), bodyTop + 26),
-            elbowNear: Offset(cx - 36 + (8 * p), bodyTop + 40 - (18 * p)),
-            elbowFar: Offset(cx + 36 - (8 * p), bodyTop + 40 - (18 * p)),
+            shoulderNear: Offset(cx - sW, bodyTop + 26),
+            shoulderFar: Offset(cx + sW, bodyTop + 26),
+            elbowNear: Offset(elbowXNear, elbowY),
+            elbowFar: Offset(elbowXFar, elbowY),
             wristNear: Offset(cx - 38, barY),
             wristFar: Offset(cx + 38, barY),
             chest: Offset(cx, bodyTop + 36),
@@ -458,28 +524,32 @@ class AnatomyKinematicPainter extends CustomPainter {
           );
 
         case AnatomyExerciseType.jumpingJack:
-          final jumpSpread = p;
-          final handXNear = cx - 18 - (32 * jumpSpread);
-          final handXFar = cx + 18 + (32 * jumpSpread);
-          final handY = (h * 0.66) - (h * 0.44) * jumpSpread;
-          final footXNear = cx - 14 - (28 * jumpSpread);
-          final footXFar = cx + 14 + (28 * jumpSpread);
+          final sW = isMale ? 25.0 : 21.0;
+          // Circular 180 degree arm arc: 10 deg to 175 deg
+          final armAngle = 0.20 + (p * 2.80);
+          final handXNear = cx - (36.0 * math.sin(armAngle));
+          final handXFar = cx + (36.0 * math.sin(armAngle));
+          final handY = (h * 0.40) + (36.0 * math.cos(armAngle));
+          // Legs jump open and close
+          final footXNear = cx - 14.0 - (26.0 * p);
+          final footXFar = cx + 14.0 + (26.0 * p);
+          final kneeBend = 3.0 * math.sin(p * math.pi);
 
           return AnatomyKinematicJoints(
-            head: Offset(cx, h * 0.20 - (4 * jumpSpread)),
-            neck: Offset(cx, h * 0.28 - (4 * jumpSpread)),
-            shoulderNear: Offset(cx - (isMale ? 25 : 21), h * 0.35 - (4 * jumpSpread)),
-            shoulderFar: Offset(cx + (isMale ? 25 : 21), h * 0.35 - (4 * jumpSpread)),
-            elbowNear: Offset(cx - 24 - (16 * jumpSpread), h * 0.48 - (20 * jumpSpread)),
-            elbowFar: Offset(cx + 24 + (16 * jumpSpread), h * 0.48 - (20 * jumpSpread)),
+            head: Offset(cx, h * 0.20 - (4 * p)),
+            neck: Offset(cx, h * 0.28 - (4 * p)),
+            shoulderNear: Offset(cx - sW, h * 0.35 - (4 * p)),
+            shoulderFar: Offset(cx + sW, h * 0.35 - (4 * p)),
+            elbowNear: Offset((cx - sW) - (18.0 * math.sin(armAngle * 0.8)), (h * 0.35) + (18.0 * math.cos(armAngle * 0.8))),
+            elbowFar: Offset((cx + sW) + (18.0 * math.sin(armAngle * 0.8)), (h * 0.35) + (18.0 * math.cos(armAngle * 0.8))),
             wristNear: Offset(handXNear, handY),
             wristFar: Offset(handXFar, handY),
-            chest: Offset(cx, h * 0.39 - (4 * jumpSpread)),
-            midSpine: Offset(cx, h * 0.48 - (4 * jumpSpread)),
-            hipNear: Offset(cx - 15, h * 0.57 - (4 * jumpSpread)),
-            hipFar: Offset(cx + 15, h * 0.57 - (4 * jumpSpread)),
-            kneeNear: Offset(footXNear * 0.8, h * 0.69),
-            kneeFar: Offset(footXFar * 0.8, h * 0.69),
+            chest: Offset(cx, h * 0.39 - (4 * p)),
+            midSpine: Offset(cx, h * 0.48 - (4 * p)),
+            hipNear: Offset(cx - 15, h * 0.57 - (4 * p)),
+            hipFar: Offset(cx + 15, h * 0.57 - (4 * p)),
+            kneeNear: Offset(footXNear * 0.82, h * 0.69 + kneeBend),
+            kneeFar: Offset(footXFar * 0.82, h * 0.69 + kneeBend),
             ankleNear: Offset(footXNear, groundY),
             ankleFar: Offset(footXFar, groundY),
             footNear: Offset(footXNear - 4, groundY),
@@ -488,14 +558,15 @@ class AnatomyKinematicPainter extends CustomPainter {
           );
 
         case AnatomyExerciseType.calfRaise:
+          final sW = isMale ? 25.0 : 21.0;
           final heelLift = p * 14.0;
-          final bodyLift = heelLift * 0.85;
+          final bodyLift = heelLift * 0.88;
 
           return AnatomyKinematicJoints(
             head: Offset(cx, h * 0.22 - bodyLift),
             neck: Offset(cx, h * 0.30 - bodyLift),
-            shoulderNear: Offset(cx - (isMale ? 25 : 21), h * 0.38 - bodyLift),
-            shoulderFar: Offset(cx + (isMale ? 25 : 21), h * 0.38 - bodyLift),
+            shoulderNear: Offset(cx - sW, h * 0.38 - bodyLift),
+            shoulderFar: Offset(cx + sW, h * 0.38 - bodyLift),
             elbowNear: Offset(cx - 22, h * 0.50 - bodyLift),
             elbowFar: Offset(cx + 22, h * 0.50 - bodyLift),
             wristNear: Offset(cx - 20, h * 0.62 - bodyLift),
@@ -523,50 +594,72 @@ class AnatomyKinematicPainter extends CustomPainter {
     // ==========================================
     switch (type) {
       case AnatomyExerciseType.squat:
-        // p=0 đứng thẳng; p=1 hạ sâu gối 90 độ, mông lùi sau
-        final squatDepth = p;
-        final hipX = cx - (30 * squatDepth);
-        final hipY = (h * 0.50) + (26 * squatDepth);
-        final kneeX = cx + (18 * squatDepth);
-        final kneeY = (h * 0.67) + (8 * squatDepth);
-        final torsoTiltX = cx + 8 + (8 * squatDepth);
-        final torsoTiltY = (h * 0.32) + (24 * squatDepth);
+        // Deep squat with constant bone lengths
+        final ankleX = cx + 2.0;
+        final ankleY = groundY;
+        const shinLen = 28.0;
+        const thighLen = 30.0;
+        const torsoLen = 32.0;
+
+        // Shin angle: 1.52 rad (~87 deg) standing to 1.10 rad (~63 deg) deep squat
+        final shinAngle = 1.52 - (0.42 * p);
+        final kneeX = ankleX + (shinLen * math.cos(shinAngle));
+        final kneeY = ankleY - (shinLen * math.sin(shinAngle));
+
+        // Thigh angle: 1.54 rad (~88 deg) to 0.10 rad (~6 deg parallel to floor)
+        final thighAngle = 1.54 - (1.44 * p);
+        final hipX = kneeX - (thighLen * math.cos(thighAngle));
+        final hipY = kneeY - (thighLen * math.sin(thighAngle));
+
+        // Torso angle: 1.50 rad (~86 deg) to 0.85 rad (~49 deg forward lean for balance)
+        final torsoAngle = 1.50 - (0.65 * p);
+        final shoulderX = hipX + (torsoLen * math.cos(torsoAngle));
+        final shoulderY = hipY - (torsoLen * math.sin(torsoAngle));
+
+        final neck = Offset(shoulderX + 2, shoulderY - 8);
+        final head = Offset(neck.dx + 2, neck.dy - 10);
+        final chest = Offset(shoulderX + 5, shoulderY + 12);
+        final midSpine = Offset((shoulderX + hipX) * 0.5 + 2, (shoulderY + hipY) * 0.5);
+
+        // Arms holding dumbbell in goblet position in front of chest
+        final elbowNear = Offset(shoulderX + 12, shoulderY + 16);
+        final wristNear = Offset(shoulderX + 18, shoulderY + 12);
 
         return AnatomyKinematicJoints(
-          head: Offset(torsoTiltX + 4, torsoTiltY - 18),
-          neck: Offset(torsoTiltX + 2, torsoTiltY - 8),
-          shoulderNear: Offset(torsoTiltX, torsoTiltY),
-          shoulderFar: Offset(torsoTiltX + 6, torsoTiltY - 3),
-          elbowNear: Offset(torsoTiltX + 16, torsoTiltY + 18),
-          elbowFar: Offset(torsoTiltX + 22, torsoTiltY + 16),
-          wristNear: Offset(torsoTiltX + 22, torsoTiltY + 14),
-          wristFar: Offset(torsoTiltX + 26, torsoTiltY + 12),
-          chest: Offset(torsoTiltX + 5, torsoTiltY + 12),
-          midSpine: Offset(hipX + 14, hipY - 14),
+          head: head,
+          neck: neck,
+          shoulderNear: Offset(shoulderX, shoulderY),
+          shoulderFar: Offset(shoulderX + 5, shoulderY - 2),
+          elbowNear: elbowNear,
+          elbowFar: Offset(elbowNear.dx + 4, elbowNear.dy - 2),
+          wristNear: wristNear,
+          wristFar: Offset(wristNear.dx + 4, wristNear.dy - 2),
+          chest: chest,
+          midSpine: midSpine,
           hipNear: Offset(hipX, hipY),
-          hipFar: Offset(hipX + 5, hipY - 2),
+          hipFar: Offset(hipX + 4, hipY - 2),
           kneeNear: Offset(kneeX, kneeY),
           kneeFar: Offset(kneeX + 4, kneeY - 2),
-          ankleNear: Offset(cx + 4, groundY),
-          ankleFar: Offset(cx + 8, groundY),
-          footNear: Offset(cx + 16, groundY),
-          footFar: Offset(cx + 20, groundY),
+          ankleNear: Offset(ankleX, ankleY),
+          ankleFar: Offset(ankleX + 4, ankleY),
+          footNear: Offset(ankleX + 14, groundY),
+          footFar: Offset(ankleX + 18, groundY),
           viewMode: KinematicViewMode.side,
           hasDumbbells: true,
-          dumbbellNear: Offset(torsoTiltX + 20, torsoTiltY + 14),
+          dumbbellNear: wristNear,
         );
 
       case AnatomyExerciseType.hipThrust:
-        // p=0 hạ mông sát sàn; p=1 đẩy hông tạo đường thẳng từ gối tới vai
-        final thrust = p;
-        final benchX = cx - 36;
+        final benchX = cx - 36.0;
         final benchY = h * 0.60;
-        final shoulderX = benchX + 4;
-        final shoulderY = benchY - 4;
-        final kneeX = cx + 24;
-        final kneeY = h * 0.58;
-        final hipX = cx - 4;
-        final hipY = (h * 0.74) - (18 * thrust);
+        final shoulderX = benchX + 6.0;
+        final shoulderY = benchY - 4.0;
+        final kneeX = cx + 22.0;
+        final kneeY = benchY + 2.0;
+
+        // Hip drives up: from near floor (groundY - 14) to tabletop flat (benchY - 4)
+        final hipX = cx - 4.0;
+        final hipY = (groundY - 14.0) - ((groundY - 10.0 - benchY) * p);
 
         return AnatomyKinematicJoints(
           head: Offset(shoulderX - 14, shoulderY - 8),
@@ -595,48 +688,54 @@ class AnatomyKinematicPainter extends CustomPainter {
         );
 
       case AnatomyExerciseType.rdl:
-        // p=0 đứng thẳng; p=1 gập hông đẩy mông ra sau, lưng phẳng
-        final hinge = p;
-        final hipX = cx - 6 - (24 * hinge);
-        final hipY = (h * 0.50) + (4 * hinge);
-        final torsoX = (cx + 8) + (18 * hinge);
-        final torsoY = (h * 0.32) + (26 * hinge);
-        final handX = (cx + 12) + (2 * hinge);
-        final handY = (h * 0.56) + (20 * hinge);
+        final ankleX = cx + 4.0;
+        final kneeX = cx + 7.0;
+        final kneeY = groundY - 26.0;
+
+        // Hip hinges back horizontally
+        final hipX = (cx - 2.0) - (24.0 * p);
+        final hipY = (groundY - 54.0) + (6.0 * p);
+
+        // Flat spine hinges forward: 1.48 rad (~85 deg) to 0.48 rad (~27 deg)
+        final torsoAngle = 1.48 - (1.00 * p);
+        final shoulderX = hipX + (32.0 * math.cos(torsoAngle));
+        final shoulderY = hipY - (32.0 * math.sin(torsoAngle));
+
+        // Dumbbells slide vertically right down the shins under gravity
+        final handX = shoulderX + 2.0;
+        final handY = (groundY - 22.0) - (22.0 * (1.0 - p));
 
         return AnatomyKinematicJoints(
-          head: Offset(torsoX + 8, torsoY - 8),
-          neck: Offset(torsoX + 4, torsoY - 2),
-          shoulderNear: Offset(torsoX, torsoY),
-          shoulderFar: Offset(torsoX + 4, torsoY - 2),
-          elbowNear: Offset(handX, (torsoY + handY) * 0.5),
-          elbowFar: Offset(handX + 4, (torsoY + handY) * 0.5),
+          head: Offset(shoulderX + 8, shoulderY - 8),
+          neck: Offset(shoulderX + 4, shoulderY - 2),
+          shoulderNear: Offset(shoulderX, shoulderY),
+          shoulderFar: Offset(shoulderX + 4, shoulderY - 2),
+          elbowNear: Offset((shoulderX + handX) * 0.5, (shoulderY + handY) * 0.5),
+          elbowFar: Offset((shoulderX + handX) * 0.5 + 4, (shoulderY + handY) * 0.5),
           wristNear: Offset(handX, handY),
           wristFar: Offset(handX + 4, handY),
-          chest: Offset(torsoX - 4, torsoY + 8),
-          midSpine: Offset((torsoX + hipX) * 0.5, (torsoY + hipY) * 0.5),
+          chest: Offset(shoulderX - 4, shoulderY + 8),
+          midSpine: Offset((shoulderX + hipX) * 0.5, (shoulderY + hipY) * 0.5),
           hipNear: Offset(hipX, hipY),
           hipFar: Offset(hipX + 4, hipY - 2),
-          kneeNear: Offset(cx + 6 - (8 * hinge), h * 0.67),
-          kneeFar: Offset(cx + 10 - (8 * hinge), h * 0.67),
-          ankleNear: Offset(cx + 4, groundY),
-          ankleFar: Offset(cx + 8, groundY),
-          footNear: Offset(cx + 16, groundY),
-          footFar: Offset(cx + 20, groundY),
+          kneeNear: Offset(kneeX, kneeY),
+          kneeFar: Offset(kneeX + 4, kneeY),
+          ankleNear: Offset(ankleX, groundY),
+          ankleFar: Offset(ankleX + 4, groundY),
+          footNear: Offset(ankleX + 14, groundY),
+          footFar: Offset(ankleX + 18, groundY),
           viewMode: KinematicViewMode.side,
           hasDumbbells: true,
           dumbbellNear: Offset(handX, handY),
         );
 
       case AnatomyExerciseType.lunge:
-        // Chân trước 90 độ, chân sau hạ thấp
-        final lungeDepth = p;
-        final frontKneeX = cx + 24;
-        final frontKneeY = (h * 0.66) + (8 * lungeDepth);
-        final rearKneeX = cx - 22;
-        final rearKneeY = (h * 0.67) + (16 * lungeDepth);
-        final hipY = (h * 0.52) + (18 * lungeDepth);
-        final torsoY = (h * 0.32) + (18 * lungeDepth);
+        final frontKneeX = cx + 22.0;
+        final frontKneeY = groundY - 24.0;
+        final rearKneeX = cx - 22.0;
+        final rearKneeY = (groundY - 22.0) + (16.0 * p);
+        final hipY = (groundY - 38.0) + (14.0 * p);
+        final torsoY = (groundY - 70.0) + (14.0 * p);
 
         return AnatomyKinematicJoints(
           head: Offset(cx + 4, torsoY - 18),
@@ -664,32 +763,42 @@ class AnatomyKinematicPainter extends CustomPainter {
 
       case AnatomyExerciseType.pushUp:
       case AnatomyExerciseType.diamondPushUp:
-        // p=0 ngực sát sàn; p=1 đẩy thẳng tay
-        final press = p;
-        final shoulderX = cx + 26;
-        final shoulderY = (groundY - 12) - (28 * press);
-        final handX = cx + 26;
-        final handY = groundY;
-        final footX = cx - 44;
+        final footX = cx - 44.0;
         final footY = groundY;
-        final hipX = cx - 8;
-        final hipY = (groundY - 10) - (20 * press);
+        final handX = cx + 26.0;
+        final handY = groundY;
+
+        // Perfect rigid athletic plank angle: 0.12 rad (~7 deg) to 0.38 rad (~22 deg)
+        final bodyAngle = 0.12 + (0.26 * p);
+        const bodyLen = 70.0;
+        final shoulderX = footX + (bodyLen * math.cos(bodyAngle));
+        final shoulderY = footY - (bodyLen * math.sin(bodyAngle));
+        final hipX = footX + (38.0 * math.cos(bodyAngle));
+        final hipY = footY - (38.0 * math.sin(bodyAngle));
+        final kneeX = footX + (19.0 * math.cos(bodyAngle));
+        final kneeY = footY - (19.0 * math.sin(bodyAngle));
+
+        // Elbow hinges smoothly backwards at 45 degrees
+        final elbowNear = Offset(
+          shoulderX - 14.0 * (1.0 - p) + 4.0 * p,
+          (shoulderY + handY) * 0.5 + 4.0 * (1.0 - p),
+        );
 
         return AnatomyKinematicJoints(
           head: Offset(shoulderX + 14, shoulderY - 4),
           neck: Offset(shoulderX + 6, shoulderY - 2),
           shoulderNear: Offset(shoulderX, shoulderY),
           shoulderFar: Offset(shoulderX + 4, shoulderY - 2),
-          elbowNear: Offset(cx + 16 + (8 * press), (shoulderY + handY) * 0.5 + (8 * (1.0 - press))),
-          elbowFar: Offset(cx + 20 + (8 * press), (shoulderY + handY) * 0.5 + (8 * (1.0 - press))),
+          elbowNear: elbowNear,
+          elbowFar: Offset(elbowNear.dx + 4, elbowNear.dy - 2),
           wristNear: Offset(handX, handY),
           wristFar: Offset(handX + 4, handY),
           chest: Offset(shoulderX - 4, shoulderY + 4),
           midSpine: Offset((shoulderX + hipX) * 0.5, (shoulderY + hipY) * 0.5),
           hipNear: Offset(hipX, hipY),
           hipFar: Offset(hipX + 2, hipY - 2),
-          kneeNear: Offset((hipX + footX) * 0.5, (hipY + footY) * 0.5),
-          kneeFar: Offset((hipX + footX) * 0.5 + 2, (hipY + footY) * 0.5),
+          kneeNear: Offset(kneeX, kneeY),
+          kneeFar: Offset(kneeX + 2, kneeY),
           ankleNear: Offset(footX, footY),
           ankleFar: Offset(footX + 4, footY),
           footNear: Offset(footX - 4, footY),
@@ -698,22 +807,22 @@ class AnatomyKinematicPainter extends CustomPainter {
         );
 
       case AnatomyExerciseType.benchPress:
-        // Lying on floor/bench pressing dumbbells upward
-        final press = p;
         final benchY = h * 0.68;
-        final bodyY = benchY - 4;
-        final shoulderX = cx - 24;
-        final hipX = cx + 12;
-        final handX = shoulderX + 4;
-        final handY = (bodyY - 14) - (28 * press);
+        final bodyY = benchY - 4.0;
+        final shoulderX = cx - 24.0;
+        final hipX = cx + 12.0;
+        final handX = shoulderX + 10.0;
+        // Dumbbells press vertically from chest (benchY - 10) to lockout (benchY - 38)
+        final handY = (bodyY - 10.0) - (28.0 * p);
+        final elbowNear = Offset(shoulderX - 4.0 * (1.0 - p), (bodyY + handY) * 0.5 + 6.0 * (1.0 - p));
 
         return AnatomyKinematicJoints(
           head: Offset(shoulderX - 16, bodyY),
           neck: Offset(shoulderX - 6, bodyY),
           shoulderNear: Offset(shoulderX, bodyY),
           shoulderFar: Offset(shoulderX + 4, bodyY - 2),
-          elbowNear: Offset(shoulderX - 2, (bodyY + handY) * 0.5 + (8 * (1.0 - press))),
-          elbowFar: Offset(shoulderX + 2, (bodyY + handY) * 0.5 + (8 * (1.0 - press))),
+          elbowNear: elbowNear,
+          elbowFar: Offset(elbowNear.dx + 4, elbowNear.dy - 2),
           wristNear: Offset(handX, handY),
           wristFar: Offset(handX + 4, handY),
           chest: Offset(shoulderX + 8, bodyY - 4),
@@ -734,16 +843,16 @@ class AnatomyKinematicPainter extends CustomPainter {
         );
 
       case AnatomyExerciseType.bentOverRow:
-        // Hinge 45 deg, arms pull dumbbells to ribs
-        final pull = p;
-        final hipX = cx - 20;
+        final hipX = cx - 18.0;
         final hipY = h * 0.52;
-        final shoulderX = cx + 14;
-        final shoulderY = h * 0.38;
-        final handX = cx + 8 - (6 * pull);
-        final handY = (h * 0.66) - (20 * pull);
-        final elbowX = cx + 2 - (12 * pull);
-        final elbowY = (h * 0.54) - (18 * pull);
+        // Torso locked at 42 degree forward hinge
+        final shoulderX = hipX + (32.0 * math.cos(0.72));
+        final shoulderY = hipY - (32.0 * math.sin(0.72));
+        // Arms pull dumbbells to ribcage
+        final handX = shoulderX - (6.0 * p);
+        final handY = (h * 0.68) - (20.0 * p);
+        final elbowX = shoulderX - 2.0 - (12.0 * p);
+        final elbowY = (h * 0.56) - (18.0 * p);
 
         return AnatomyKinematicJoints(
           head: Offset(shoulderX + 12, shoulderY - 8),
@@ -758,8 +867,8 @@ class AnatomyKinematicPainter extends CustomPainter {
           midSpine: Offset((shoulderX + hipX) * 0.5, (shoulderY + hipY) * 0.5),
           hipNear: Offset(hipX, hipY),
           hipFar: Offset(hipX + 4, hipY - 2),
-          kneeNear: Offset(cx - 2, h * 0.68),
-          kneeFar: Offset(cx + 2, h * 0.68),
+          kneeNear: Offset(cx - 2, groundY - 26),
+          kneeFar: Offset(cx + 2, groundY - 26),
           ankleNear: Offset(cx, groundY),
           ankleFar: Offset(cx + 4, groundY),
           footNear: Offset(cx + 12, groundY),
@@ -770,18 +879,22 @@ class AnatomyKinematicPainter extends CustomPainter {
         );
 
       case AnatomyExerciseType.tricepsExtension:
-        // Cẳng tay gập sau đầu rồi duỗi thẳng lên trần
-        final ext = p;
-        final handX = cx - 4 - (8 * (1.0 - ext));
-        final handY = (h * 0.16) + (24 * (1.0 - ext));
+        final shoulderY = h * 0.38;
+        final elbowX = cx + 2.0;
+        final elbowY = h * 0.20;
+        // Forearm extends overhead from 90 deg behind head
+        final forearmAngle = -1.57 + (1.57 * p); // -90 deg to 0 deg (pointing up)
+        const forearmLen = 22.0;
+        final handX = elbowX + (forearmLen * math.sin(forearmAngle));
+        final handY = elbowY - (forearmLen * math.cos(forearmAngle));
 
         return AnatomyKinematicJoints(
           head: Offset(cx + 4, h * 0.22),
           neck: Offset(cx + 2, h * 0.30),
-          shoulderNear: Offset(cx, h * 0.36),
-          shoulderFar: Offset(cx + 4, h * 0.34),
-          elbowNear: Offset(cx + 2, h * 0.22),
-          elbowFar: Offset(cx + 6, h * 0.20),
+          shoulderNear: Offset(cx, shoulderY),
+          shoulderFar: Offset(cx + 4, shoulderY - 2),
+          elbowNear: Offset(elbowX, elbowY),
+          elbowFar: Offset(elbowX + 4, elbowY - 2),
           wristNear: Offset(handX, handY),
           wristFar: Offset(handX + 4, handY),
           chest: Offset(cx + 6, h * 0.40),
@@ -801,12 +914,12 @@ class AnatomyKinematicPainter extends CustomPainter {
 
       case AnatomyExerciseType.plank:
         final breath = math.sin(p * math.pi * 2) * 1.5;
-        final shoulderX = cx + 24;
-        final shoulderY = (groundY - 26) + breath;
-        final footX = cx - 42;
+        final shoulderX = cx + 24.0;
+        final shoulderY = (groundY - 26.0) + breath;
+        final footX = cx - 42.0;
         final footY = groundY;
-        final hipX = cx - 8;
-        final hipY = shoulderY + 4;
+        final hipX = cx - 8.0;
+        final hipY = shoulderY + 4.0;
 
         return AnatomyKinematicJoints(
           head: Offset(shoulderX + 14, shoulderY - 2),
@@ -831,14 +944,12 @@ class AnatomyKinematicPainter extends CustomPainter {
         );
 
       case AnatomyExerciseType.crunch:
-        // Lying on back curling torso upward
-        final curl = p;
-        final pelvisX = cx - 14;
-        final pelvisY = groundY - 6;
-        final shoulderX = (cx - 36) + (14 * curl);
-        final shoulderY = (groundY - 8) - (20 * curl);
-        final headX = shoulderX - 10;
-        final headY = shoulderY - 10;
+        final pelvisX = cx - 14.0;
+        final pelvisY = groundY - 6.0;
+        final shoulderX = (cx - 36.0) + (14.0 * p);
+        final shoulderY = (groundY - 8.0) - (20.0 * p);
+        final headX = shoulderX - 10.0;
+        final headY = shoulderY - 10.0;
 
         return AnatomyKinematicJoints(
           head: Offset(headX, headY),
@@ -863,16 +974,14 @@ class AnatomyKinematicPainter extends CustomPainter {
         );
 
       case AnatomyExerciseType.donkeyKick:
-        // Quỳ gối chống hai tay, một chân đá thẳng lên cao
-        final kick = p;
-        final hipX = cx - 10;
-        final hipY = groundY - 28;
-        final handX = cx + 22;
+        final hipX = cx - 10.0;
+        final hipY = groundY - 28.0;
+        final handX = cx + 22.0;
         final handY = groundY;
-        final kneeKickX = (hipX - 14) - (12 * kick);
-        final kneeKickY = (hipY + 8) - (24 * kick);
-        final footKickX = kneeKickX - 4;
-        final footKickY = kneeKickY - 18;
+        final kneeKickX = (hipX - 12.0) - (8.0 * p);
+        final kneeKickY = (hipY + 6.0) - (22.0 * p);
+        final footKickX = kneeKickX - 4.0;
+        final footKickY = kneeKickY - 18.0;
 
         return AnatomyKinematicJoints(
           head: Offset(cx + 32, groundY - 32),
@@ -898,8 +1007,8 @@ class AnatomyKinematicPainter extends CustomPainter {
 
       case AnatomyExerciseType.mountainClimber:
         final alt = math.sin(p * math.pi * 2);
-        final kneeDriveX = cx + 4 + (16 * alt.abs());
-        final kneeDriveY = groundY - 18;
+        final kneeDriveX = cx + 4.0 + (16.0 * alt.abs());
+        final kneeDriveY = groundY - 18.0;
 
         return AnatomyKinematicJoints(
           head: Offset(cx + 36, groundY - 34),
@@ -924,9 +1033,7 @@ class AnatomyKinematicPainter extends CustomPainter {
         );
 
       case AnatomyExerciseType.burpee:
-        // Transition cycle
-        final drop = p;
-        final bodyY = (h * 0.35) + ((groundY - 16 - (h * 0.35)) * drop);
+        final bodyY = (h * 0.35) + ((groundY - 16.0 - (h * 0.35)) * p);
         return AnatomyKinematicJoints(
           head: Offset(cx + 12, bodyY - 14),
           neck: Offset(cx + 6, bodyY - 6),
@@ -952,8 +1059,7 @@ class AnatomyKinematicPainter extends CustomPainter {
       case AnatomyExerciseType.yoga:
       case AnatomyExerciseType.general:
       default:
-        // Gentle rhythmic mobility pose
-        final wave = math.sin(p * math.pi * 2) * 3;
+        final wave = math.sin(p * math.pi * 2) * 3.0;
         return AnatomyKinematicJoints(
           head: Offset(cx + 4, h * 0.24 + wave),
           neck: Offset(cx + 2, h * 0.32 + wave),

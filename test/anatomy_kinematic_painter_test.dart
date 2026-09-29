@@ -151,6 +151,44 @@ void main() {
       );
       expect(femalePainter.themeColor, const Color(0xFFFF2E93));
     });
+
+    test('computeBiomechanicalPhase produces athletic 4-phase rep tempo with peak hold', () {
+      // Phase 1: Ready stance at top lockout (t < 0.08)
+      expect(
+        AnatomyKinematicPainter.computeBiomechanicalPhase(0.04, AnatomyExerciseType.squat),
+        equals(0.0),
+      );
+
+      // Phase 2: Eccentric smooth descent (0.08 <= t < 0.46)
+      final midEccentric = AnatomyKinematicPainter.computeBiomechanicalPhase(0.27, AnatomyExerciseType.squat);
+      expect(midEccentric, greaterThan(0.0));
+      expect(midEccentric, lessThan(1.0));
+
+      // Phase 3: Peak isometric hold for technique observation (0.46 <= t < 0.58)
+      expect(
+        AnatomyKinematicPainter.computeBiomechanicalPhase(0.50, AnatomyExerciseType.squat),
+        equals(1.0),
+      );
+      expect(
+        AnatomyKinematicPainter.computeBiomechanicalPhase(0.55, AnatomyExerciseType.squat),
+        equals(1.0),
+      );
+
+      // Phase 4: Concentric smooth ascent (0.58 <= t < 0.90)
+      final midConcentric = AnatomyKinematicPainter.computeBiomechanicalPhase(0.74, AnatomyExerciseType.squat);
+      expect(midConcentric, greaterThan(0.0));
+      expect(midConcentric, lessThan(1.0));
+
+      // Phase 5: Reset stance (0.90 <= t <= 1.0)
+      expect(
+        AnatomyKinematicPainter.computeBiomechanicalPhase(0.96, AnatomyExerciseType.squat),
+        equals(0.0),
+      );
+
+      // Cyclical cardio movements use smooth harmonic sinusoids
+      final climberMid = AnatomyKinematicPainter.computeBiomechanicalPhase(0.5, AnatomyExerciseType.mountainClimber);
+      expect(climberMid, closeTo(1.0, 0.05));
+    });
   });
 
   group('AnatomyKinematicPainter Widget Paint Tests', () {
