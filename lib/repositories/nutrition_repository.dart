@@ -161,6 +161,22 @@ class NutritionRepository {
     return logs.isNotEmpty;
   }
 
+  /// Lưu hàng loạt món ăn vào SQLite (dùng cho 2-Way Sync khi đăng nhập)
+  Future<void> saveMultipleFoodLogs(List<FoodLogEntry> entries) async {
+    if (entries.isEmpty) return;
+    final db = await AppDatabase.instance.database;
+    final batch = db.batch();
+    for (final e in entries) {
+      batch.insert(
+        'food_entries',
+        e.toDbMap(),
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+    }
+    await batch.commit(noResult: true);
+    invalidateCache();
+  }
+
   /// Xóa sạch dữ liệu thực phẩm trong SQLite
   Future<void> clearAll() async {
     final db = await AppDatabase.instance.database;

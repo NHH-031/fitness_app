@@ -344,6 +344,29 @@ class WaterRepository {
     await prefs.setInt(_keyWaterReminderInterval, minutes);
   }
 
+  /// Lưu hàng loạt bản ghi lịch sử nước vào SQLite (dùng cho 2-Way Sync khi đăng nhập)
+  Future<void> saveMultipleWaterLogs(List<Map<String, dynamic>> logs) async {
+    if (logs.isEmpty) return;
+    final db = await AppDatabase.instance.database;
+    final batch = db.batch();
+    for (final item in logs) {
+      final date = item['date']?.toString();
+      if (date != null && date.isNotEmpty) {
+        batch.insert(
+          'daily_water_history',
+          {
+            'date': date,
+            'cups': (item['cups'] as num?)?.toInt() ?? 0,
+            'volume_ml': (item['volumeMl'] as num?)?.toInt() ?? 0,
+            'updated_at': item['updatedAt']?.toString() ?? DateTime.now().toIso8601String(),
+          },
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
+      }
+    }
+    await batch.commit(noResult: true);
+  }
+
   /// Xóa sạch dữ liệu nước uống
   Future<void> clearAll() async {
     final prefs = await SharedPreferences.getInstance();

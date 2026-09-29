@@ -7,6 +7,8 @@ import 'services/locale_service.dart';
 import 'services/auth_service.dart';
 import 'services/storage_service.dart';
 import 'services/gemini_service.dart';
+import 'services/health_sync_service.dart';
+import 'database/app_database.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -14,6 +16,10 @@ void main() async {
   await NotificationService().init();
   await LocaleService.init();
   await AuthService().init();
+  try {
+    await AppDatabase.instance.database;
+    await HealthSyncService.instance.init();
+  } catch (_) {}
   final customApiKey = await StorageService.getGeminiApiKey();
   if (customApiKey != null && customApiKey.isNotEmpty) {
     GeminiService.setApiKey(customApiKey);

@@ -37,6 +37,7 @@ class CaloriesOutBreakdownSheet extends StatefulWidget {
 class _CaloriesOutBreakdownSheetState extends State<CaloriesOutBreakdownSheet> {
   UserProfile? _userProfile;
   List<Map<String, dynamic>> _todayWorkouts = [];
+  int _effectiveSteps = 0;
   int _bmrAccumulated = 0;
   int _stepsBurn = 0;
   int _workoutsBurn = 0;
@@ -49,11 +50,13 @@ class _CaloriesOutBreakdownSheetState extends State<CaloriesOutBreakdownSheet> {
     super.initState();
     _loadData();
     StorageService.dataUpdateNotifier.addListener(_loadData);
+    StorageService.stepUpdateNotifier.addListener(_loadData);
   }
 
   @override
   void dispose() {
     StorageService.dataUpdateNotifier.removeListener(_loadData);
+    StorageService.stepUpdateNotifier.removeListener(_loadData);
     super.dispose();
   }
 
@@ -71,17 +74,20 @@ class _CaloriesOutBreakdownSheetState extends State<CaloriesOutBreakdownSheet> {
     final double bmr = profile.bmr;
     final int bmrAcc = (bmr * fraction).round();
 
-    int effectiveSteps = widget.currentSteps;
-    if (!isToday) {
-      effectiveSteps = await StorageService.getStepsByDate(targetDate);
-    }
-    final int sBurn = (effectiveSteps * 0.04).round();
+    int effectiveSteps = widget.currentSteps > 0
+        ? widget.currentSteps
+        : await StorageService.getStepsByDate(targetDate);
+    final int sBurn = UserMetricsService.calculateStepCalories(
+      effectiveSteps,
+      weightKg: profile.weight,
+    );
     final int wBurn = await StorageService.getWorkoutCaloriesByDate(targetDate);
     final workouts = await StorageService.getWorkoutLogsByDate(targetDate);
 
     if (mounted) {
       setState(() {
         _userProfile = profile;
+        _effectiveSteps = effectiveSteps;
         _fractionOfDay = fraction;
         _bmrAccumulated = bmrAcc;
         _stepsBurn = sBurn;
@@ -624,10 +630,10 @@ class _CaloriesOutBreakdownSheetState extends State<CaloriesOutBreakdownSheet> {
                               : 'Walking & Daily Steps',
                           calories: _stepsBurn,
                           description: LocaleService.isVietnamese
-                              ? 'Đã đi ${widget.currentSteps} bước hôm nay. Tiêu chuẩn y học thể thao tính 0.04 kcal mỗi bước di chuyển.'
-                              : 'Completed ${widget.currentSteps} steps today calculated at 0.04 kcal per step.',
-                          footerText: widget.currentSteps > 0
-                              ? '${widget.currentSteps} bước × 0.04 = $_stepsBurn kcal'
+                              ? 'Đã đi $_effectiveSteps bước hôm nay. Tiêu chuẩn y học thể thao tính theo trọng lượng (${_userProfile?.weight.toStringAsFixed(1) ?? '70'} kg).'
+                              : 'Completed $_effectiveSteps steps today calculated based on body weight (${_userProfile?.weight.toStringAsFixed(1) ?? '70'} kg).',
+                          footerText: _effectiveSteps > 0
+                              ? '$_effectiveSteps bước = $_stepsBurn kcal'
                               : (LocaleService.isVietnamese
                                   ? 'Cầm điện thoại di chuyển để cảm biến đếm bước tự động'
                                   : 'Walk with your phone to automatically track steps'),

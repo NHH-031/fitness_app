@@ -155,6 +155,34 @@ class WorkoutRepository {
     return logs.isNotEmpty;
   }
 
+  /// Lưu hàng loạt bài tập vào SQLite (dùng cho 2-Way Sync khi đăng nhập)
+  Future<void> saveMultipleWorkoutLogs(List<Map<String, dynamic>> logs) async {
+    if (logs.isEmpty) return;
+    final db = await AppDatabase.instance.database;
+    final batch = db.batch();
+    for (final w in logs) {
+      final timestamp = w['timestamp']?.toString() ?? DateTime.now().toIso8601String();
+      final date = w['date']?.toString() ?? timestamp.split('T')[0];
+      batch.insert(
+        'workout_logs',
+        {
+          'title': w['title']?.toString() ?? 'Workout',
+          'duration': (w['duration'] as num?)?.toInt() ?? 0,
+          'calories': (w['calories'] as num?)?.toInt() ?? 0,
+          'sets': (w['sets'] as num?)?.toInt(),
+          'reps': (w['reps'] as num?)?.toInt(),
+          'weight': (w['weight'] as num?)?.toDouble(),
+          'equipment': w['equipment']?.toString(),
+          'timestamp': timestamp,
+          'date': date,
+        },
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+    }
+    await batch.commit(noResult: true);
+    invalidateCache();
+  }
+
   /// Xóa sạch dữ liệu bài tập trong bảng SQLite
   Future<void> clearAll() async {
     final db = await AppDatabase.instance.database;

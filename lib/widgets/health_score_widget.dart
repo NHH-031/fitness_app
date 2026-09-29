@@ -286,6 +286,7 @@ class _HealthScoreWidgetState extends State<HealthScoreWidget> {
     super.initState();
     _loadRealData();
     StorageService.dataUpdateNotifier.addListener(_loadRealData);
+    StorageService.stepUpdateNotifier.addListener(_loadRealData);
     _listenToSteps();
   }
 
@@ -301,6 +302,7 @@ class _HealthScoreWidgetState extends State<HealthScoreWidget> {
   @override
   void dispose() {
     StorageService.dataUpdateNotifier.removeListener(_loadRealData);
+    StorageService.stepUpdateNotifier.removeListener(_loadRealData);
     super.dispose();
   }
 
@@ -319,8 +321,9 @@ class _HealthScoreWidgetState extends State<HealthScoreWidget> {
     final waterCups = await StorageService.getWaterCupsByDate(targetDate);
     final streak = await StorageService.getCurrentStreak();
 
-    int effectiveSteps = _effectiveSteps;
-    if (!isToday) {
+    int effectiveSteps = widget.currentSteps ??
+        (isToday ? _effectiveSteps : await StorageService.getStepsByDate(targetDate));
+    if (effectiveSteps == 0) {
       effectiveSteps = await StorageService.getStepsByDate(targetDate);
     }
 

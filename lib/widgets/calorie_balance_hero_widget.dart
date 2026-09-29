@@ -33,6 +33,7 @@ class _CalorieBalanceHeroWidgetState extends State<CalorieBalanceHeroWidget> {
     super.initState();
     _refreshBalance();
     StorageService.dataUpdateNotifier.addListener(_refreshBalance);
+    StorageService.stepUpdateNotifier.addListener(_refreshBalance);
   }
 
   @override
@@ -47,20 +48,17 @@ class _CalorieBalanceHeroWidgetState extends State<CalorieBalanceHeroWidget> {
   @override
   void dispose() {
     StorageService.dataUpdateNotifier.removeListener(_refreshBalance);
+    StorageService.stepUpdateNotifier.removeListener(_refreshBalance);
     super.dispose();
   }
 
   Future<void> _refreshBalance() async {
     final targetDate = widget.selectedDate ?? DateTime.now();
-    final now = DateTime.now();
-    final bool isToday = targetDate.year == now.year &&
-        targetDate.month == now.month &&
-        targetDate.day == now.day;
 
     final cin = await StorageService.getTotalCaloriesInByDate(targetDate);
     final cout = await StorageService.calculateCaloriesBurnedByDate(
       date: targetDate,
-      steps: isToday ? widget.currentSteps : null,
+      steps: widget.currentSteps > 0 ? widget.currentSteps : null,
     );
 
     if (mounted) {

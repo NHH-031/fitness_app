@@ -28,6 +28,8 @@ class _StepCounterWidgetState extends State<StepCounterWidget> {
   static const eventChannel = EventChannel('com.example.fitness_tracker/steps');
 
   int _currentSteps = 0;
+  double _userWeight = 70.0;
+  double _userHeight = 175.0;
 
   bool _isToday(DateTime d) {
     final now = DateTime.now();
@@ -40,6 +42,7 @@ class _StepCounterWidgetState extends State<StepCounterWidget> {
     _loadSavedSteps();
     _initStepCounter();
     StorageService.stepUpdateNotifier.addListener(_loadSavedSteps);
+    StorageService.profileUpdateNotifier.addListener(_loadSavedSteps);
   }
 
   @override
@@ -53,6 +56,7 @@ class _StepCounterWidgetState extends State<StepCounterWidget> {
   @override
   void dispose() {
     StorageService.stepUpdateNotifier.removeListener(_loadSavedSteps);
+    StorageService.profileUpdateNotifier.removeListener(_loadSavedSteps);
     super.dispose();
   }
 
@@ -62,10 +66,13 @@ class _StepCounterWidgetState extends State<StepCounterWidget> {
     final saved = isToday
         ? await StorageService.getTodaySteps()
         : await StorageService.getStepsByDate(targetDate);
+    final profile = await StorageService.getUserProfile();
 
     if (mounted) {
       setState(() {
         _currentSteps = saved;
+        _userWeight = profile.weight;
+        _userHeight = profile.height;
       });
     }
   }
@@ -107,10 +114,16 @@ class _StepCounterWidgetState extends State<StepCounterWidget> {
         ? (_currentSteps / widget.goalSteps).clamp(0.0, 1.0)
         : 0.0;
 
-    // 1. Quãng đường (km) = bước * 0.75m
-    final String distanceKm = (_currentSteps * 0.00075).toStringAsFixed(2);
-    // 2. Calo đốt cháy (kcal) = bước * 0.04
-    final int activeKcal = (_currentSteps * 0.04).round();
+    // 1. Quãng đường (km)
+    final String distanceKm = UserMetricsService.calculateStepDistanceKm(
+      _currentSteps,
+      heightCm: _userHeight,
+    ).toStringAsFixed(2);
+    // 2. Calo đốt cháy (kcal)
+    final int activeKcal = UserMetricsService.calculateStepCalories(
+      _currentSteps,
+      weightKg: _userWeight,
+    );
     // 3. Thời gian đi bộ tích cực (phút) = bước / 100
     final int activeMins = (_currentSteps / 100).round();
     // 4. Số bước còn lại để hoàn thành mục tiêu

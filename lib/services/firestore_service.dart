@@ -409,6 +409,8 @@ class FirestoreService {
         'completed_workout_logs',
         sortedWorkouts.map((w) => jsonEncode(w)).toList(),
       );
+      // Đồng bộ vào cơ sở dữ liệu SQLite
+      await WorkoutRepository.instance.saveMultipleWorkoutLogs(sortedWorkouts);
 
       // 5. Food Logs 2-Way Merge
       final rawFoodLogs = prefs.getStringList('user_food_logs') ?? [];
@@ -418,6 +420,15 @@ class FirestoreService {
           localFoodList.add(FoodLogEntry.fromJson(jsonDecode(str) as Map<String, dynamic>));
         } catch (_) {}
       }
+      try {
+        final sqliteFoods = await NutritionRepository.instance.getFoodLogs();
+        for (final sf in sqliteFoods) {
+          if (!localFoodList.any((lf) => lf.id == sf.id)) {
+            localFoodList.add(sf);
+          }
+        }
+      } catch (_) {}
+
       final cloudFoodList = await getAllFoodLogs();
       final Map<String, FoodLogEntry> mergedFoodMap = {};
       for (final f in cloudFoodList) {
@@ -438,6 +449,8 @@ class FirestoreService {
         'user_food_logs',
         sortedFood.map((f) => jsonEncode(f.toJson())).toList(),
       );
+      // Đồng bộ vào cơ sở dữ liệu SQLite
+      await NutritionRepository.instance.saveMultipleFoodLogs(sortedFood);
 
       // 6. Water Logs 2-Way Merge & Bảo toàn lượng nước uống hôm nay
       final localWaterHistory = await StorageService.getWaterHistoryLogs();
@@ -530,6 +543,8 @@ class FirestoreService {
         });
       }).toList();
       await prefs.setStringList('daily_water_history', encodedWaterList);
+      // Đồng bộ vào cơ sở dữ liệu SQLite
+      await WaterRepository.instance.saveMultipleWaterLogs(mergedWaterMap.values.toList());
 
       if (finalTodayCups > 0 || finalTodayMl > 0) {
         final waterDoc = doc.collection('water_logs').doc(todayStr);

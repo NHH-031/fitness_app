@@ -12,6 +12,7 @@ import 'firestore_service.dart';
 import 'gemini_service.dart';
 import 'locale_service.dart';
 import 'widget_sync_service.dart';
+import 'user_metrics_service.dart';
 
 export '../models/food_log_entry.dart';
 export '../models/daily_water_log.dart';
@@ -1665,7 +1666,10 @@ class StorageService {
         : 1.0;
 
     final int bmrAccumulated = (userBmr * fractionOfDay).round();
-    final int stepsBurn = (currentSteps * 0.04).round();
+    final int stepsBurn = UserMetricsService.calculateStepCalories(
+      currentSteps,
+      weightKg: userProfile.weight,
+    );
     final int workoutsBurn = await getWorkoutCaloriesByDate(date);
 
     return bmrAccumulated + stepsBurn + workoutsBurn;
@@ -1740,14 +1744,14 @@ class StorageService {
 
     // Nếu là hôm nay hoặc ngày quá khứ có hoạt động thật sự nhưng chưa lưu snapshot:
     final steps = await getStepsByDate(date);
-    final distanceKm = steps * 0.00075;
-    final stepCalories = (steps * 0.04).round();
+    final userProfile = await getUserProfile();
+    final distanceKm = UserMetricsService.calculateStepDistanceKm(steps, heightCm: userProfile.height);
+    final stepCalories = UserMetricsService.calculateStepCalories(steps, weightKg: userProfile.weight);
     final caloriesIn = await getTotalCaloriesInByDate(date);
     final workoutCalories = await getWorkoutCaloriesByDate(date);
     final workoutMinutes = await getWorkoutMinutesByDate(date);
     final waterCups = await getWaterCupsByDate(date);
     final waterMl = await getWaterVolumeByDate(date);
-    final userProfile = await getUserProfile();
     final bmr = userProfile.bmr.round();
 
     final caloriesOut = await calculateCaloriesBurnedByDate(

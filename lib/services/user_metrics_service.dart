@@ -138,12 +138,10 @@ class UserMetricsService {
     return (bmrBurnedUntilNow + workoutCalories + stepCalories).round();
   }
 
-  /// Ước tính calo tiêu hao từ số bước chân
-  static int calculateStepCalories(int steps, {double weightKg = 70.0}) {
+  /// Ước tính calo tiêu hao từ số bước chân (Tiêu chuẩn thể thao y học 0.04 kcal/bước)
+  static int calculateStepCalories(int steps, {double? weightKg}) {
     if (steps <= 0) return 0;
-    // Trung bình 0.04 - 0.05 kcal/bước với người 70kg
-    final factor = (weightKg / 70.0) * 0.042;
-    return (steps * factor).round();
+    return (steps * 0.04).round();
   }
 
   /// Ước tính quãng đường (km) từ số bước chân

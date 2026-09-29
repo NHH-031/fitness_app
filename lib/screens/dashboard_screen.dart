@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:figma_squircle/figma_squircle.dart';
 import 'package:hugeicons/hugeicons.dart';
 import '../theme.dart';
@@ -28,10 +27,7 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
-  static const eventChannel = EventChannel('com.example.fitness_tracker/steps');
   int _streak = 0;
-  int _currentSteps = 0;
-  int _initialSteps = -1;
   String _userName = 'ATHLETE';
   DateTime _selectedDate = DateTime.now();
   DateTime _joinedDate = DateTime.now();
@@ -43,7 +39,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     _loadStreak();
     _loadProfile();
     _loadJoinedDate();
-    _listenToSteps();
     StorageService.profileUpdateNotifier.addListener(_onDataUpdated);
     _badgeSubscription = AchievementService.onBadgeUnlocked.listen((badge) {
       if (mounted) {
@@ -97,21 +92,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
-  void _listenToSteps() {
-    eventChannel.receiveBroadcastStream().listen((dynamic event) {
-      int steps = event as int;
-      if (mounted) {
-        setState(() {
-          if (_initialSteps == -1) {
-            _initialSteps = steps;
-          }
-          _currentSteps = steps - _initialSteps;
-        });
-      }
-    }, onError: (dynamic error) {
-      debugPrint("Step Sensor EventChannel Error: $error");
-    });
-  }
 
   bool _isToday(DateTime d) {
     final now = DateTime.now();
@@ -507,7 +487,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
               // 1. Hero Calorie Balance Card (Real-time In vs Out & History)
               CalorieBalanceHeroWidget(
-                currentSteps: _currentSteps,
                 selectedDate: _selectedDate,
               ),
 
@@ -515,7 +494,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
               // 2. Health Score Widget (Connected to Real-time Calorie Data & History)
               HealthScoreWidget(
-                currentSteps: _currentSteps,
                 selectedDate: _selectedDate,
               ),
 
@@ -531,7 +509,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
               // 4. Real-time Calories Burn Chart (Dynamic 24h curve & History)
               CaloriesChartWidget(
-                currentSteps: _currentSteps,
                 selectedDate: _selectedDate,
               ),
 

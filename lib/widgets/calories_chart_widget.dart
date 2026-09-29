@@ -50,6 +50,7 @@ class _CaloriesChartWidgetState extends State<CaloriesChartWidget> {
     super.initState();
     _recalculateCalories();
     StorageService.dataUpdateNotifier.addListener(_recalculateCalories);
+    StorageService.stepUpdateNotifier.addListener(_recalculateCalories);
 
     // Tự động làm mới thời gian thực mỗi 30 giây để cập nhật tích lũy BMR và giờ hiện tại
     _realtimeTimer = Timer.periodic(const Duration(seconds: 30), (_) {
@@ -73,6 +74,7 @@ class _CaloriesChartWidgetState extends State<CaloriesChartWidget> {
   void dispose() {
     _realtimeTimer?.cancel();
     StorageService.dataUpdateNotifier.removeListener(_recalculateCalories);
+    StorageService.stepUpdateNotifier.removeListener(_recalculateCalories);
     super.dispose();
   }
 
@@ -116,11 +118,13 @@ class _CaloriesChartWidgetState extends State<CaloriesChartWidget> {
     final int cin = await StorageService.getTotalCaloriesInByDate(targetDate);
     final int bmrAccumulated = (personalBmr * fractionOfDay).round();
 
-    int effectiveSteps = widget.currentSteps;
-    if (!isToday) {
-      effectiveSteps = await StorageService.getStepsByDate(targetDate);
-    }
-    final int stepsCal = (effectiveSteps * 0.04).round();
+    int effectiveSteps = widget.currentSteps > 0
+        ? widget.currentSteps
+        : await StorageService.getStepsByDate(targetDate);
+    final int stepsCal = UserMetricsService.calculateStepCalories(
+      effectiveSteps,
+      weightKg: userProfile.weight,
+    );
     final int workoutsCal = await StorageService.getWorkoutCaloriesByDate(targetDate);
     final int totalOut = bmrAccumulated + stepsCal + workoutsCal;
 
