@@ -93,7 +93,7 @@ Mô hình phân quyền Android đã tiến hóa nhằm nâng cao tính minh b�
 
 ## 1.3. Framework Flutter và cơ chế Platform Channel
 
-Flutter là bộ công cụ phát triển giao diện người dùng (*UI SDK*) mã nguồn mở do Google phát triển, cho phép xây dựng ứng dụng đa nền tảng biên dịch ra mã máy từ cơ sở mã nguồn duy nhất bằng ngôn ngữ Dart.
+Flutter là bộ công cụ phát triển giao diện người dùng (*UI SDK*) mã nguồn mở do Google phát triển. Trong đề tài, nhóm dùng Flutter để xây dựng giao diện cho ứng dụng Android; mã nguồn Dart được biên dịch ra mã máy khi đóng gói APK.
 
 Khác với các giải pháp lai (*Hybrid*) phụ thuộc vào WebView hoặc cầu nối Javascript ánh xạ widget, Flutter sở hữu bộ máy kết xuất đồ họa độc lập (Flutter Engine viết bằng C++). Engine này sử dụng thư viện Impeller hoặc Skia để trực tiếp vẽ từng điểm ảnh (*pixel-level rendering*) lên bề mặt đồ họa của Android (`SurfaceView`). Nhờ đó, Flutter duy trì tốc độ kết xuất 60 đến 120 khung hình mỗi giây và bảo đảm tính nhất quán giao diện trên nhiều thiết bị.
 
@@ -143,7 +143,7 @@ Bảng 1.1: Danh mục công nghệ và thư viện chính trong dự án
 
 | Nhóm công nghệ | Tên công nghệ / Thư viện | Phiên bản | Vai trò và chức năng chính |
 |---|---|---|---|
-| **Nền tảng** | Flutter SDK | 3.47.6 | Framework chính phát triển giao diện đa nền tảng |
+| **Nền tảng** | Flutter SDK | 3.47.6 | Framework chính phát triển giao diện ứng dụng Android |
 | | Dart SDK | 3.13.5 | Ngôn ngữ lập trình logic ứng dụng và giao diện |
 | | Android SDK & Kotlin | Kotlin 2.2.20 | Tầng xử lý native, Foreground Service, cảm biến |
 | **Lưu trữ** | `sqflite` | ^2.4.2+1 | CSDL SQLite cục bộ lưu 7 bảng quan hệ |

@@ -63,11 +63,12 @@ ios/ macos/ linux/ windows/ web/   Thư mục nền tảng do Flutter sinh ra, h
 |---|---|---|
 | `MethodChannel …/service` | Dart → Kotlin | `startService`, `isIgnoringBatteryOptimizations`, `requestIgnoreBatteryOptimizations`, `updateWidget` |
 | `EventChannel …/steps` | Kotlin → Dart | Stream số bước cứng từ `StepCounterService` (qua `sendBroadcast` + `BroadcastReceiver` trong `MainActivity`) |
+| `MethodChannel …/speech` + `EventChannel …/speech_events` | Hai chiều | Nhận dạng giọng nói native (`SpeechRecognizerBridge`): `isAvailable`, `start {locale}`, `stop`, `cancel`; sự kiện status/result/error |
 | `SharedPreferences` (`FlutterSharedPreferences`, key tiền tố `flutter.`) | Hai chiều | Kotlin và Dart cùng đọc/ghi `today_steps`, `step_baseline_*`, `step_reboot_offset`, `water_cups_today` |
 
 **Đếm bước nền**: `StepCounterService` (foreground service, `foregroundServiceType="health"`, `START_STICKY`) đăng ký `TYPE_STEP_COUNTER` với batching 10 s; `BootReceiver` khởi động lại sau boot/cập nhật app; `FitnessAppWidgetProvider` đọc prefs để vẽ widget. Dart cần quyền `ACTIVITY_RECOGNITION` (xin ở `step_counter_widget.dart`).
 
-**AI**: `GeminiService` (`google_generative_ai`, chỉ dùng một model `gemini-2.5-flash` (hằng số `_modelName` ở đầu `GeminiService`, gọi qua `_generate()` / `_generateStream()`, không có model dự phòng). Đã bỏ 3.8/3.7 vì hay trả 503/429 hoặc treo > 90 s với ảnh, còn 2.5-flash ổn định 3–7 s. Model Gemini bị Google tắt định kỳ — `gemini-2.0-flash` và `1.5-flash` đã ngừng, nên kiểm tra lại danh sách model khi AI báo lỗi). Thực phẩm: `OpenFoodFactsService` (barcode qua `mobile_scanner`). Giọng nói: `SpeechService`.
+**AI**: `GeminiService` (`google_generative_ai`, chỉ dùng một model `gemini-2.5-flash` (hằng số `_modelName` ở đầu `GeminiService`, gọi qua `_generate()` / `_generateStream()`, không có model dự phòng). Đã bỏ 3.8/3.7 vì hay trả 503/429 hoặc treo > 90 s với ảnh, còn 2.5-flash ổn định 3–7 s. Model Gemini bị Google tắt định kỳ — `gemini-2.0-flash` và `1.5-flash` đã ngừng, nên kiểm tra lại danh sách model khi AI báo lỗi). Thực phẩm: `OpenFoodFactsService` (barcode qua `mobile_scanner`). Giọng nói: `SpeechService` → `SpeechRecognizerBridge.kt` (không dùng plugin `speech_to_text`: plugin luôn lấy dịch vụ mặc định, trên Xiaomi là mibrain chỉ nghe tiếng Anh; bridge ưu tiên `GoogleRecognitionService` nếu có và đang bật).
 
 ## Cạm bẫy cần biết trước khi sửa
 

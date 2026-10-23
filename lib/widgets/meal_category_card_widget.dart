@@ -514,25 +514,29 @@ class _AddFoodModalState extends State<_AddFoodModal> {
 
   Future<void> _initSpeech() async {
     await _speechService.initialize(
-      onStatus: (status) {
-        if (status == 'done' || status == 'notListening') {
-          if (mounted && _isListening) {
-            setState(() {
-              _isListening = false;
-              _statusText = 'Voice recorded! Ready to analyze.';
-            });
-          }
-        }
-      },
-      onError: (err) {
-        if (mounted) {
-          setState(() {
-            _isListening = false;
-            _statusText = 'Speech error: $err';
-          });
-        }
-      },
+      onStatus: _handleSpeechStatus,
+      onError: _handleSpeechError,
     );
+  }
+
+  void _handleSpeechStatus(String status) {
+    if (status == 'done' || status == 'notListening') {
+      if (mounted && _isListening) {
+        setState(() {
+          _isListening = false;
+          _statusText = 'Voice recorded! Ready to analyze.';
+        });
+      }
+    }
+  }
+
+  void _handleSpeechError(String err) {
+    if (mounted) {
+      setState(() {
+        _isListening = false;
+        _statusText = 'Speech error: $err';
+      });
+    }
   }
 
   @override
@@ -563,7 +567,7 @@ class _AddFoodModalState extends State<_AddFoodModal> {
         _statusText = 'Listening to meal description...';
         _textController.clear();
       });
-      await _speechService.startListening(
+      final started = await _speechService.startListening(
         onResult: (text, isFinal) {
           if (mounted) {
             setState(() {
@@ -571,7 +575,18 @@ class _AddFoodModalState extends State<_AddFoodModal> {
             });
           }
         },
+        // Gắn lại callback: widget khác có thể đã giữ micro trước đó
+        onStatus: _handleSpeechStatus,
+        onError: _handleSpeechError,
       );
+      if (!started && mounted) {
+        setState(() {
+          _isListening = false;
+          _statusText = LocaleService.isVietnamese
+              ? 'Máy chưa hỗ trợ nhận dạng giọng nói hoặc chưa cấp quyền micro.'
+              : 'Speech recognition is unavailable or microphone permission is missing.';
+        });
+      }
     }
   }
 

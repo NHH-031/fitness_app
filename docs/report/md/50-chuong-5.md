@@ -9,23 +9,14 @@ Nhằm đảm bảo tính ổn định và hạn chế lỗi hồi quy trong qu�
 Kiểm thử tĩnh được thực hiện qua bộ công cụ `flutter analyze` kết hợp quy chuẩn `package:flutter_lints/flutter.yaml`. 
 
 ```yaml
-analyzer:
-  exclude:
-    - build/**
-    - android/**
-    - ios/**
-    - web/**
-    - windows/**
-    - macos/**
-    - linux/**
 include: package:flutter_lints/flutter.yaml
 
 linter:
   rules:
 ```
-(Nguồn: analysis_options.yaml:10-32)
+(Nguồn: analysis_options.yaml:19-32, đã lược phần chú thích)
 
-Dự án dùng nguyên bộ luật khuyến nghị của `flutter_lints` (mục `rules:` để trống, không tắt hay bổ sung luật nào), đồng thời loại các thư mục nền tảng và thư mục `build/` khỏi phạm vi phân tích để `flutter analyze` chỉ quét mã Dart của ứng dụng và bộ kiểm thử.
+Dự án dùng nguyên bộ luật khuyến nghị của `flutter_lints` (mục `rules:` để trống, không tắt hay bổ sung luật nào), đồng thời loại thư mục `build/` và mã native `android/` khỏi phạm vi phân tích (khối `analyzer.exclude`) để `flutter analyze` chỉ quét mã Dart của ứng dụng và bộ kiểm thử.
 
 Quy chuẩn này quét cây cú pháp Dart nhằm phát hiện biến không sử dụng, rủi ro bất đồng bộ và khởi tạo đối tượng dư thừa. Kết quả phân tích đạt 0 lỗi và 0 cảnh báo:
 
@@ -38,28 +29,27 @@ Chính sách không chấp nhận lỗi tĩnh giúp mã nguồn duy trì tính �
 
 ### 5.1.2. Chiến lược cô lập kiểm thử tầng dữ liệu với SQLite FFI
 
-Cơ sở dữ liệu SQLite trong Flutter phụ thuộc thư viện native của Android. Để kiểm thử trên máy trạm hoặc máy chủ CI mà không cần mở máy ảo Android, nhóm sử dụng thư viện `sqflite_common_ffi`. Khi phát hiện cờ môi trường `FLUTTER_TEST`, ứng dụng khởi tạo cơ sở dữ liệu trên bộ nhớ RAM qua hằng số `inMemoryDatabasePath`:
+Cơ sở dữ liệu SQLite trong Flutter phụ thuộc thư viện native của Android. Để kiểm thử trên máy trạm hoặc máy chủ CI mà không cần mở máy ảo Android, nhóm sử dụng thư viện `sqflite_common_ffi`. Khi phát hiện cờ môi trường `FLUTTER_TEST`, hàm `ensureFfiInitialized()` chuyển `databaseFactory` sang bản FFI, sau đó `_initDatabase()` mở cơ sở dữ liệu trên bộ nhớ RAM qua hằng số `inMemoryDatabasePath` thay cho tệp `fitness_tracker.db` trên thiết bị Android:
 
 ```dart
-static void ensureFfiInitialized() {
-  if (_ffiInitialized) return;
-  if (!kIsWeb &&
-      (Platform.isWindows ||
-          Platform.isLinux ||
-          Platform.isMacOS ||
-          Platform.environment.containsKey('FLUTTER_TEST'))) {
-    sqfliteFfiInit();
-    databaseFactory = databaseFactoryFfi;
-    _ffiInitialized = true;
-  }
+if (Platform.environment.containsKey('FLUTTER_TEST')) {
+  // Khi chạy flutter test, dùng database in-memory để kiểm thử nhanh và sạch
+  return await databaseFactory.openDatabase(inMemoryDatabasePath,
+      options: OpenDatabaseOptions(
+        version: 1,
+        onCreate: (db, v) async {
+          await _onCreate(db, v);
+          await _createV2Tables(db);
+        },
+      ));
 }
 ```
-(Nguồn: lib/database/app_database.dart:18-29)
+(Nguồn: lib/database/app_database.dart:46-55)
 
 Giải pháp này mang lại ba ưu điểm kỹ thuật:
 1. **Tính độc lập:** Bộ kiểm thử chạy trên cơ sở dữ liệu nằm trong RAM, tự hủy khi tiến trình kiểm thử kết thúc; các nhóm test gọi `clearAllUserData()` hoặc khởi tạo lại dữ liệu để không phụ thuộc lẫn nhau.
 2. **Tốc độ thực thi:** Thao tác đọc ghi trên bộ nhớ RAM diễn ra nhanh, không phát sinh độ trễ I/O đĩa vật lý.
-3. **Độc lập nền tảng:** Bộ kiểm thử chạy được trên máy trạm và máy chủ CI tự động mà không cần thiết bị Android vật lý.
+3. **Không cần thiết bị:** Bộ kiểm thử chạy được trên máy trạm và máy chủ CI tự động mà không cần điện thoại hay máy ảo Android.
 
 Song song đó, nhóm gọi `SharedPreferences.setMockInitialValues({})` trước mỗi bài test để giả lập kho lưu trữ khóa - giá trị rỗng, phục vụ kiểm thử chuỗi ngày đăng nhập (*streak*) và lượng nước uống.
 

@@ -19,6 +19,7 @@ class MainActivity : FlutterFragmentActivity() {
     private val EVENT_CHANNEL = "com.example.fitness_tracker/steps"
     private val METHOD_CHANNEL = "com.example.fitness_tracker/service"
     private var eventSink: EventChannel.EventSink? = null
+    private var speechBridge: SpeechRecognizerBridge? = null
 
     private val stepReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -31,6 +32,9 @@ class MainActivity : FlutterFragmentActivity() {
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+
+        // Nhận dạng giọng nói native (ưu tiên dịch vụ của Google)
+        speechBridge = SpeechRecognizerBridge(this, flutterEngine.dartExecutor.binaryMessenger)
 
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, METHOD_CHANNEL).setMethodCallHandler { call, result ->
             when (call.method) {
@@ -105,6 +109,8 @@ class MainActivity : FlutterFragmentActivity() {
     }
 
     override fun onDestroy() {
+        speechBridge?.dispose()
+        speechBridge = null
         try {
             unregisterReceiver(stepReceiver)
         } catch (_: Exception) {

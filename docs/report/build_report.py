@@ -20,7 +20,7 @@ from PIL import Image
 
 import docx
 from docx.shared import Inches, Pt, Cm, RGBColor
-from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_TAB_ALIGNMENT, WD_TAB_LEADER
 from docx.enum.table import WD_TABLE_ALIGNMENT, WD_ROW_HEIGHT_RULE, WD_CELL_VERTICAL_ALIGNMENT
 from docx.oxml import parse_xml, OxmlElement
 from docx.oxml.ns import nsdecls, qn
@@ -131,6 +131,37 @@ def enable_update_fields(doc):
 # 2. XỬ LÝ NỘI DUNG VĂN BẢN VÀ CÔNG THỨC INLINE
 # ==============================================================================
 
+def configure_toc_styles(doc):
+    """Đồng bộ style mục lục: style toc 1-4 của file mẫu lệch cỡ (13/11/13/11pt) và lẫn đậm/nghiêng."""
+    # (tên style, đậm, nghiêng, thụt trái, thụt treo cho dòng xuống hàng, khoảng trước)
+    levels = [
+        ('toc 1', True, False, Cm(0), Cm(0), Pt(6)),
+        ('toc 2', False, False, Cm(0.6), Cm(1.0), Pt(2)),
+        ('toc 3', False, True, Cm(1.2), Cm(1.4), Pt(0)),
+        # Danh mục hình dùng trường TOC kèm "caption,4" nên các mục hình nhận style toc 4
+        ('toc 4', False, False, Cm(0), Cm(1.9), Pt(2)),
+    ]
+    for name, bold, italic, indent, hanging, before in levels:
+        if name not in doc.styles:
+            continue
+        st = doc.styles[name]
+        st.font.size = Pt(13)
+        st.font.bold = bold
+        st.font.italic = italic
+        pf = st.paragraph_format
+        pf.left_indent = indent + hanging
+        pf.first_line_indent = -hanging
+        # Chừa chỗ cho số trang để chữ xuống dòng không lấn vào cột số trang
+        pf.right_indent = Cm(1.2)
+        pf.space_before = before
+        pf.space_after = Pt(0)
+        pf.line_spacing = 1.15
+        pf.alignment = WD_ALIGN_PARAGRAPH.LEFT
+        pf.tab_stops.clear_all()
+        # Lề trang 3 cm + 2 cm trên khổ A4 → vùng chữ rộng 16 cm, số trang căn phải kèm dấu chấm dẫn
+        pf.tab_stops.add_tab_stop(Cm(16), WD_TAB_ALIGNMENT.RIGHT, WD_TAB_LEADER.DOTS)
+
+
 def clean_latex(math_str):
     """Làm sạch các ký hiệu LaTeX thành ký tự Unicode dễ đọc trong báo cáo Word."""
     text = math_str.strip()
@@ -238,6 +269,20 @@ def add_natural_breaks(text):
     return res
 
 
+CODE_BREAK_MIN_LEN = 16
+
+CAPTION_FONT = 'Times New Roman'
+CAPTION_SIZE = Pt(13)
+
+
+def format_caption_runs(paragraph):
+    """Chú thích hình/bảng: toàn bộ run (kể cả tên lớp trong dấu `) dùng Times New Roman 13pt."""
+    for run in paragraph.runs:
+        run.font.name = CAPTION_FONT
+        run.font.size = CAPTION_SIZE
+        run.font.color.rgb = None
+
+
 def add_formatted_text(paragraph, text, base_font_size=None, base_font_name=None, in_table=False):
     """Thêm các run có định dạng inline vào paragraph hỗ trợ lồng ghép kiểu chữ."""
     tokens = parse_inline_tokens(text)
@@ -246,6 +291,10 @@ def add_formatted_text(paragraph, text, base_font_size=None, base_font_name=None
             continue
 
         if in_table and not is_math:
+            content = add_natural_breaks(content)
+        elif is_code and len(content) >= CODE_BREAK_MIN_LEN:
+            # Đoạn văn căn đều: tên lớp/đường dẫn dài không ngắt được sẽ bị đẩy xuống dòng
+            # và làm dòng trên giãn dấu cách rất rộng, nên cho phép Word ngắt tại . / _ và camelCase
             content = add_natural_breaks(content)
 
         run = paragraph.add_run(content)
@@ -334,7 +383,7 @@ def update_cover_page(doc):
 def update_figure_list_table(doc):
     """
     Xóa 28 dòng danh mục hình cũ của môn Linux và chèn trường tự động:
-    TOC \\h \\z \\t "caption,1"
+    TOC \\h \\z \\t "caption,4"
     """
     print("--> Đang làm sạch danh mục hình ảnh cũ và chèn trường TOF tự động...")
     body = doc.element.body
@@ -378,7 +427,7 @@ def update_figure_list_table(doc):
         f'<w:fldChar w:fldCharType="begin" w:dirty="true"/>'
         f'</w:r>'
         f'<w:r>'
-        f'<w:instrText xml:space="preserve"> TOC \\h \\z \\t "caption,1" </w:instrText>'
+        f'<w:instrText xml:space="preserve"> TOC \\h \\z \\t "caption,4" </w:instrText>'
         f'</w:r>'
         f'<w:r>'
         f'<w:fldChar w:fldCharType="separate"/>'
@@ -394,7 +443,7 @@ def update_figure_list_table(doc):
     )
     tof_heading_el.addnext(tof_p)
 
-    print("    [OK] Đã xóa toàn bộ 28 hình cũ của Linux và chèn trường TOC \\h \\z \\t \"caption,1\".")
+    print("    [OK] Đã xóa toàn bộ 28 hình cũ của Linux và chèn trường TOC \\h \\z \\t \"caption,4\".")
 
 
 def clean_old_intro_and_chapters(doc):
@@ -581,7 +630,8 @@ def insert_image_or_placeholder(doc, caption_text, img_rel_path, chup_instructio
     p_cap.paragraph_format.left_indent = Pt(0)
     p_cap.paragraph_format.right_indent = Pt(0)
 
-    add_formatted_text(p_cap, caption_text, base_font_size=Pt(11))
+    add_formatted_text(p_cap, caption_text, base_font_size=CAPTION_SIZE)
+    format_caption_runs(p_cap)
 
     if ref_el is not None:
         ref_el.addprevious(p_cap._p)
@@ -1158,7 +1208,8 @@ def parse_and_insert_markdown(doc, md_filepath, ref_el=None, is_chapter=False):
             p_tbl_cap.paragraph_format.first_line_indent = Pt(0)
             p_tbl_cap.paragraph_format.left_indent = Pt(0)
 
-            add_formatted_text(p_tbl_cap, table_title, base_font_size=Pt(11))
+            add_formatted_text(p_tbl_cap, table_title, base_font_size=CAPTION_SIZE)
+            format_caption_runs(p_tbl_cap)
 
             if ref_el is not None:
                 ref_el.addprevious(p_tbl_cap._p)
@@ -1290,13 +1341,17 @@ def build_full_report():
     # 1. Mở bản sao của tài liệu gốc
     doc = docx.Document(TEMPLATE_PATH)
 
-    # Cấu hình chuẩn cỡ chữ mặc định cho styles (14pt cho Normal & List Paragraph, 11pt cho Caption)
+    # Cấu hình chuẩn cỡ chữ mặc định cho styles (14pt cho Normal & List Paragraph, 13pt cho Caption)
     if 'Normal' in doc.styles:
         doc.styles['Normal'].font.size = Pt(14)
     if 'List Paragraph' in doc.styles:
         doc.styles['List Paragraph'].font.size = Pt(14)
     if 'Caption' in doc.styles:
-        doc.styles['Caption'].font.size = Pt(11)
+        doc.styles['Caption'].font.size = CAPTION_SIZE
+        # File mẫu đặt Caption là Liberation Serif (font Linux), đổi về Times New Roman cho cả 4 bảng mã
+        cap_fonts = doc.styles['Caption'].element.get_or_add_rPr().get_or_add_rFonts()
+        for attr in ('ascii', 'hAnsi', 'eastAsia', 'cs'):
+            cap_fonts.set(qn(f'w:{attr}'), CAPTION_FONT)
         doc.styles['Caption'].paragraph_format.first_line_indent = Pt(0)
         doc.styles['Caption'].paragraph_format.left_indent = Pt(0)
 
@@ -1313,6 +1368,8 @@ def build_full_report():
                         val = int(el.attrib.get(f"{{{W_NS}}}val", "999"))
                         if val < 22:
                             el.set(f"{{{W_NS}}}val", "22")
+
+    configure_toc_styles(doc)
 
     # Đảm bảo đoạn nhận xét của giáo viên hướng dẫn có cỡ chữ chuẩn 14pt
     for p_idx in [7, 8]:
@@ -1602,7 +1659,7 @@ def verify_and_generate_log():
         f.write(f"- **Khổ giấy**: A4 ({round(sec.page_width/914400*2.54, 2)} cm × {round(sec.page_height/914400*2.54, 2)} cm)\n")
         f.write(f"- **Lề trang chuẩn**: Trái {left_cm} cm (chuẩn 3.0 cm), Phải {right_cm} cm (chuẩn 2.0 cm), Trên {top_cm} cm (chuẩn 2.5 cm), Dưới {bottom_cm} cm (chuẩn 2.0 cm) -> ✅ **Khớp 100%**\n")
         f.write(f"- **Trường mục lục**: Đã giữ nguyên trường `TOC \\o \"1-3\" \\h \\z \\u` từ file gốc\n")
-        f.write(f"- **Danh mục hình ảnh**: Đã chèn trường động `TOC \\h \\z \\t \"caption,1\"`\n")
+        f.write(f"- **Danh mục hình ảnh**: Đã chèn trường động `TOC \\h \\z \\t \"caption,4\"`\n")
         f.write(f"- **Cài đặt cập nhật trường**: Đã kích hoạt `<w:updateFields w:val=\"true\"/>` trong `word/settings.xml`\n\n")
 
         f.write("## 6. Kiểm Tra Quy Chuẩn Cỡ Chữ (Font Size Standards)\n\n")
@@ -1612,7 +1669,7 @@ def verify_and_generate_log():
         f.write(f"| **Từ khóa & Code (Consolas)** | Tối thiểu 11pt, inline 12pt (`Pt(11)`/`Pt(12)`) | **{runs_code} runs** (tất cả ≥ 11pt) | ✅ ĐẠT |\n")
         f.write(f"| **Từ khóa sót backtick chưa parse** | Tuyệt đối 0 ký tự backtick sót ngoài code | **{len(unparsed_backticks)} vi phạm** | ✅ ĐẠT |\n")
         f.write(f"| **Bảng biểu dữ liệu** | Tối thiểu 11pt (`Pt(11)`) | **{runs_table} runs** (tất cả ≥ 11pt) | ✅ ĐẠT |\n")
-        f.write(f"| **Chú thích hình/bảng (Caption)** | Cỡ chữ 11pt (`Pt(11)`) | **{runs_caption} runs** (tất cả ≥ 11pt) | ✅ ĐẠT |\n")
+        f.write(f"| **Chú thích hình/bảng (Caption)** | Times New Roman 13pt (`Pt(13)`) | **{runs_caption} runs** (tất cả ≥ 11pt) | ✅ ĐẠT |\n")
         f.write(f"| **Thành phần dưới 11pt (< 11pt)** | Tuyệt đối loại bỏ cỡ 9.5pt, 10pt cũ | **{len(small_runs)} vi phạm** | ✅ ĐẠT |\n")
         f.write(f"| **Cấp tiêu đề (Headings 1-4)** | Bảo toàn nguyên vẹn kiểu dáng & cỡ chữ | **{len(h1_list)} H1, {len(h2_list)} H2, {len(h3_list)} H3, {len(h4_list)} H4** | ✅ ĐẠT |\n\n")
 

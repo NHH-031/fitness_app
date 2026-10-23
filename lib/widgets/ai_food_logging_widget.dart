@@ -91,28 +91,32 @@ class _AiFoodLoggingWidgetState extends State<AiFoodLoggingWidget>
 
   Future<void> _initSpeech() async {
     await _speechService.initialize(
-      onStatus: (status) {
-        if (status == 'done' || status == 'notListening') {
-          if (mounted && _isListening) {
-            setState(() {
-              _isListening = false;
-              _speechStatus = 'Recording finished. Ready to analyze!';
-            });
-            if (_textController.text.trim().isNotEmpty) {
-              _analyzeFood();
-            }
-          }
-        }
-      },
-      onError: (error) {
-        if (mounted) {
-          setState(() {
-            _isListening = false;
-            _speechStatus = 'Could not hear clearly: $error. Please try again!';
-          });
-        }
-      },
+      onStatus: _handleSpeechStatus,
+      onError: _handleSpeechError,
     );
+  }
+
+  void _handleSpeechStatus(String status) {
+    if (status == 'done' || status == 'notListening') {
+      if (mounted && _isListening) {
+        setState(() {
+          _isListening = false;
+          _speechStatus = 'Recording finished. Ready to analyze!';
+        });
+        if (_textController.text.trim().isNotEmpty) {
+          _analyzeFood();
+        }
+      }
+    }
+  }
+
+  void _handleSpeechError(String error) {
+    if (mounted) {
+      setState(() {
+        _isListening = false;
+        _speechStatus = 'Could not hear clearly: $error. Please try again!';
+      });
+    }
   }
 
   @override
@@ -132,7 +136,7 @@ class _AiFoodLoggingWidgetState extends State<AiFoodLoggingWidget>
       _textController.clear();
     });
 
-    await _speechService.startListening(
+    final started = await _speechService.startListening(
       onResult: (text, isFinal) {
         if (mounted) {
           setState(() {
@@ -140,7 +144,18 @@ class _AiFoodLoggingWidgetState extends State<AiFoodLoggingWidget>
           });
         }
       },
+      // Gắn lại callback: widget khác có thể đã giữ micro trước đó
+      onStatus: _handleSpeechStatus,
+      onError: _handleSpeechError,
     );
+    if (!started && mounted) {
+      setState(() {
+        _isListening = false;
+        _speechStatus = LocaleService.isVietnamese
+            ? 'Máy chưa hỗ trợ nhận dạng giọng nói hoặc chưa cấp quyền micro.'
+            : 'Speech recognition is unavailable or microphone permission is missing.';
+      });
+    }
   }
 
   Future<void> _stopVoiceListening() async {
@@ -676,44 +691,49 @@ class _AiFoodLoggingWidgetState extends State<AiFoodLoggingWidget>
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF00F0FF).withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    child: const Icon(
-                      Icons.restaurant_rounded,
-                      color: Color(0xFF00F0FF),
-                      size: 22,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        LocaleService.tr('ai_food_logging_title'),
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 1.0,
-                          color: AppTheme.textPrimaryColor,
-                        ),
+              // Expanded để tiêu đề co lại khi nút chuyển mic/bàn phím xuất hiện
+              Expanded(
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF00F0FF).withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(14),
                       ),
-                      const SizedBox(height: 2),
-                      Text(
-                        LocaleService.tr('ai_food_logging_sub'),
-                        style: const TextStyle(
-                          fontSize: 11,
-                          color: AppTheme.textSecondaryColor,
-                        ),
+                      child: const Icon(
+                        Icons.restaurant_rounded,
+                        color: Color(0xFF00F0FF),
+                        size: 22,
                       ),
-                    ],
-                  ),
-                ],
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          MarqueeText(
+                            LocaleService.tr('ai_food_logging_title'),
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 1.0,
+                              color: AppTheme.textPrimaryColor,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          MarqueeText(
+                            LocaleService.tr('ai_food_logging_sub'),
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: AppTheme.textSecondaryColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
               if (_isLogging)
                 IconButton(

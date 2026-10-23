@@ -8,7 +8,7 @@ Trong bối cảnh thiết bị di động ngày càng phổ biến, nhu cầu t
 
 Hệ thống cung cấp bốn nhóm chức năng cốt lõi phục vụ rèn luyện thể chất:
 - *Theo dõi vận động và bước chân*: Thu thập bước chân qua cảm biến phần cứng `TYPE_STEP_COUNTER` bằng dịch vụ tiền cảnh (*Foreground Service*), lọc nhiễu dao động ở tầng Dart (tối đa 5 bước/giây khi ứng dụng đang mở), tính quãng đường và calo tiêu hao, tự động đặt lại mốc khi nhận dữ liệu cảm biến đầu tiên của ngày mới và cập nhật tiện ích màn hình chính (*App Widget*).
-- *Quản lý chế độ tập luyện*: Cung cấp danh mục bài tập gym và thể trọng, mô phỏng giải phẫu động học 2D trên Canvas giúp kiểm tra tư thế, điều phối phiên tập với đồng hồ bấm giờ, lưu hiệp/lần/tạ và đếm ngược thời gian nghỉ.
+- *Quản lý chế độ tập luyện*: Cung cấp danh mục bài tập gym và thể trọng, mô phỏng động tác trên mô hình cấu trúc cơ 2D vẽ bằng Canvas giúp kiểm tra tư thế, điều phối phiên tập với đồng hồ bấm giờ, lưu hiệp/lần/tạ và đếm ngược thời gian nghỉ.
 - *Nhật ký dinh dưỡng và trợ lý AI*: Ghi nhận khẩu phần ăn, tính năng lượng và ba chất đa lượng (*Protein / Carbohydrate / Fat*), quét mã vạch qua Open Food Facts, theo dõi nước uống và hỏi đáp với trợ lý Gemini AI (`gemini-2.5-flash`).
 - *Hồ sơ cá nhân và bảo mật sinh trắc học*: Tính chỉ số BMI, BMR và TDEE; lưu số đo nhân trắc học, ảnh tiến trình, bảo mật qua vân tay (*BiometricPrompt*) và hỗ trợ chuyển đổi giữa chế độ khách (*Guest Mode*) và tài khoản Google.
 
@@ -19,7 +19,7 @@ Bảng 2.1: Danh mục yêu cầu chức năng của hệ thống
 | F-01 | Đếm bước chân nền | Đọc `TYPE_STEP_COUNTER`, lọc nhiễu và tính calo | Cảm biến nền |
 | F-02 | Đồng bộ App Widget | Hiển thị bước chân và nước uống trên màn hình chính | Cảm biến nền |
 | F-03 | Quản lý bài tập | Tra cứu, lọc bài tập theo nhóm cơ và dụng cụ | Người dùng |
-| F-04 | Động học giải phẫu 2D | Vẽ vector 18 khớp xương và bản đồ nhóm cơ | Người dùng |
+| F-04 | Mô hình cấu trúc cơ 2D | Vẽ vector 18 khớp xương và bản đồ nhóm cơ | Người dùng |
 | F-05 | Thực hiện phiên tập | Bấm giờ phiên tập, lưu set/rep/tạ và đếm giờ nghỉ | Người dùng |
 | F-06 | Nhật ký dinh dưỡng | Ghi nhận món ăn, tính calo và tỷ lệ đa lượng | Người dùng |
 | F-07 | Quét mã vạch thực phẩm | Tra cứu thành phần qua Open Food Facts API | Người dùng |
@@ -59,7 +59,7 @@ Hệ thống mô hình hóa tương tác qua bốn tác nhân (*Actors*): Ngư�
 
 Hệ thống ca sử dụng trên Hình 2.1 gồm bốn phân hệ chính:
 - *Theo dõi vận động*: "Đếm bước chân nền" do Cảm biến nền kích hoạt tự động, kích hoạt tiếp "Cập nhật widget màn hình chính" để hiển thị số liệu trên màn hình chính (*Home Screen*). Người dùng tương tác qua "Xem thống kê vận động ngày và tuần".
-- *Quản lý tập luyện*: Người dùng thực hiện "Tra cứu danh mục bài tập", "Xem mô phỏng động học giải phẫu", "Thực hiện phiên tập và đếm giờ nghỉ", và lưu kết quả qua "Ghi nhận nhật ký bài tập".
+- *Quản lý tập luyện*: Người dùng thực hiện "Tra cứu danh mục bài tập", "Xem mô phỏng trên mô hình cấu trúc cơ", "Thực hiện phiên tập và đếm giờ nghỉ", và lưu kết quả qua "Ghi nhận nhật ký bài tập".
 - *Dinh dưỡng & Trợ lý AI*: Gồm "Ghi nhận khẩu phần dinh dưỡng" (kết hợp "Quét mã vạch thực phẩm OpenFoodFacts"), "Theo dõi lượng nước uống" và "Tư vấn dinh dưỡng với Gemini AI".
 - *Hồ sơ & Bảo mật*: Người dùng thực hiện "Cập nhật chỉ số nhân trắc học", "Bật/tắt khóa vân tay", "Chuyển đổi ngôn ngữ", "Đăng nhập Google / Chế độ khách" và "Đồng bộ dữ liệu hai chiều" với Cloud Firestore.
 
@@ -122,7 +122,7 @@ Bảng 2.3: Phân bố cấu trúc thư mục và trách nhiệm thiết kế
 | `lib/repositories/` | Dart | Cung cấp giao diện truy xuất dữ liệu theo miền, quản lý cache RAM |
 | `lib/services/` | Dart | Tích hợp Firebase Auth, Cloud Firestore, Gemini AI, Open Food Facts |
 | `lib/screens/` | Dart | Xây dựng 4 màn hình chính và các màn hình phụ (Login, Onboarding) |
-| `lib/widgets/` | Dart | Chứa thành phần giao diện: giải phẫu 2D, biểu đồ `fl_chart`, dock kính |
+| `lib/widgets/` | Dart | Chứa thành phần giao diện: mô hình cấu trúc cơ 2D, biểu đồ `fl_chart`, dock kính |
 | `android/.../kotlin/` | Kotlin | Cài đặt `StepCounterService`, `BootReceiver`, `FitnessAppWidgetProvider` |
 | `android/.../res/` | XML | Định nghĩa layout widget màn hình chính và tài nguyên đồ họa native |
 

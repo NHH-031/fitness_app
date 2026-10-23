@@ -313,7 +313,7 @@ Khi nằm trong danh sách miễn trừ, dịch vụ được hệ điều hành
 
 ## 3.6. Cầu nối Platform Channel và đồng bộ dữ liệu dùng chung
 
-Fitness Tracker kết hợp giao diện đa nền tảng Flutter và các thành phần hệ thống Android Native. Hai tầng này giao tiếp qua Platform Channel và đồng bộ dữ liệu qua bộ nhớ cục bộ.
+Fitness Tracker kết hợp giao diện Flutter và các thành phần hệ thống Android Native. Hai tầng này giao tiếp qua Platform Channel và đồng bộ dữ liệu qua bộ nhớ cục bộ.
 
 ### 3.6.1. Kiến trúc MethodChannel và EventChannel
 

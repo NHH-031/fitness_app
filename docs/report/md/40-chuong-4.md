@@ -1,6 +1,6 @@
 # CHƯƠNG 4. CÀI ĐẶT VÀ KẾT QUẢ CHỨC NĂNG
 
-Chương này trình bày chi tiết kết quả cài đặt thực tế các chức năng chính trên ứng dụng Fitness Tracker, phân tích các giải pháp kỹ thuật trên nền tảng Flutter và Android SDK nhằm hiện thực hóa từng giao diện người dùng. Nội dung chương tập trung vào bốn phân hệ nòng cốt: màn hình bảng điều khiển trung tâm (*Dashboard*), phân hệ quản lý luyện tập và mô hình giải phẫu động học cơ thể, phân hệ theo dõi dinh dưỡng kết hợp trí tuệ nhân tạo và tra cứu mã vạch, cùng phân hệ quản lý hồ sơ cá nhân, bảo mật sinh trắc học và đa ngôn ngữ. Mỗi chức năng được làm rõ qua các quyết định thiết kế kiến trúc, công thức tính toán khoa học, đoạn mã nguồn thực thi then chốt và các minh chứng giao diện thực tế.
+Chương này trình bày chi tiết kết quả cài đặt thực tế các chức năng chính trên ứng dụng Fitness Tracker, phân tích các giải pháp kỹ thuật trên nền tảng Flutter và Android SDK nhằm hiện thực hóa từng giao diện người dùng. Nội dung chương tập trung vào bốn phân hệ nòng cốt: màn hình bảng điều khiển trung tâm (*Dashboard*), phân hệ quản lý luyện tập và mô hình cấu trúc cơ 2D, phân hệ theo dõi dinh dưỡng kết hợp trí tuệ nhân tạo và tra cứu mã vạch, cùng phân hệ quản lý hồ sơ cá nhân, bảo mật sinh trắc học và đa ngôn ngữ. Mỗi chức năng được làm rõ qua các quyết định thiết kế kiến trúc, công thức tính toán khoa học, đoạn mã nguồn thực thi then chốt và các minh chứng giao diện thực tế.
 
 ## 4.1. Màn hình Dashboard và tổng quan theo dõi sức khỏe
 
@@ -103,13 +103,13 @@ Hình 4.2 là Dashboard trên thiết bị thử nghiệm: thẻ cân bằng cal
 ![Hình 4.2: Giao diện màn hình Dashboard tổng quan](img/chup-dashboard.png)
 > CHỤP: Tab Dashboard (tab 1) / thẻ cân bằng calo, điểm sức khỏe và vòng tiến độ bước chân / mở ứng dụng ở màn hình chính.
 
-## 4.2. Quản lý luyện tập và mô hình giải phẫu động học cơ thể
+## 4.2. Quản lý luyện tập và mô hình cấu trúc cơ 2D
 
-Phân hệ luyện tập (`WorkoutScreen` và `ActiveWorkoutScreen`) được thiết kế nhằm hỗ trợ người dùng thực hiện các bài rèn luyện thể chất một cách bài bản, trực quan hóa các nhóm cơ vận động thông qua mô hình giải phẫu 2D và ghi nhận chi tiết lịch sử từng hiệp tập.
+Phân hệ luyện tập (`WorkoutScreen` và `ActiveWorkoutScreen`) được thiết kế nhằm hỗ trợ người dùng thực hiện các bài rèn luyện thể chất một cách bài bản, trực quan hóa các nhóm cơ vận động thông qua mô hình cấu trúc cơ 2D và ghi nhận chi tiết lịch sử từng hiệp tập.
 
 ### 4.2.1. Phân loại bài tập theo nhóm cơ chính và trang thiết bị
 
-Hệ thống quản lý danh mục bài tập đa dạng, được phân chia theo 6 nhóm cơ giải phẫu chính của cơ thể:
+Hệ thống quản lý danh mục bài tập đa dạng, được phân chia theo 6 nhóm cơ chính của cơ thể:
 - **Ngực (*Chest*):** Các bài tập đẩy tạo độ dày và khung ngực như Hít đất (*Push-ups*), Đẩy ngực tạ đơn (*Dumbbell Bench Press*).
 - **Lưng (*Back*):** Các bài tập kéo phát triển cơ lưng xô và độ dày lưng như Hít xà đơn (*Pull-ups*), Kéo tạ lưng xô (*Dumbbell Row*).
 - **Chân (*Legs*):** Các bài tập phát triển đùi trước, đùi sau và bắp chân như Gập gối (*Squat*), Chùng chân (*Lunges*), Deadlift tạ đơn (*RDL*).
@@ -131,13 +131,13 @@ Bảng 4.2: Cấu trúc thông tin bài tập và nhóm cơ mục tiêu trong h�
 | **Đẩy vai qua đầu** | Cơ Vai (*Shoulders*) | Tạ đơn (*Dumbbell*) | 3 hiệp × 10 reps (8 kg) | 105 kcal / bài |
 | **Plank siết cơ bụng** | Cơ Bụng (*Core*) | Bodyweight | Đếm giờ 60 giây | 35 kcal / hiệp |
 
-### 4.2.2. Mô hình giải phẫu cơ thể tương tác bằng CustomPainter
+### 4.2.2. Mô hình cấu trúc cơ tương tác bằng CustomPainter
 
-Điểm nhấn kỹ thuật nổi bật trong phân hệ luyện tập là bản đồ giải phẫu nhóm cơ tương tác (`MuscleAnatomyMapWidget`). Thay vì nạp các tệp hình ảnh tĩnh hoặc hoạt cảnh Lottie có dung lượng lớn và khó tùy biến màu sắc, nhóm chọn giải pháp vẽ trực tiếp mô hình cơ thể người 2D lên Canvas bằng `CustomPainter`.
+Điểm nhấn kỹ thuật nổi bật trong phân hệ luyện tập là bản đồ nhóm cơ tương tác (`MuscleAnatomyMapWidget`). Thay vì nạp các tệp hình ảnh tĩnh hoặc hoạt cảnh Lottie có dung lượng lớn và khó tùy biến màu sắc, nhóm chọn giải pháp vẽ trực tiếp mô hình cơ thể người 2D lên Canvas bằng `CustomPainter`.
 
 Giải pháp này bao gồm hai lớp vẽ vector:
-1. `_AnatomySilhouettePainter`: Vẽ đường viền bóng hình giải phẫu cơ thể người ở cả hai góc nhìn mặt trước (*Anterior*) và mặt sau (*Posterior*), hỗ trợ cấu trúc giải phẫu riêng cho Nam giới và Nữ giới. Các khối cơ được định vị bằng hệ tọa độ chuẩn hóa tương đối `Offset(x, y)` trên khung vẽ kích thước $140 \times 280\text{ dp}$, giúp tỷ lệ cơ thể luôn giữ nguyên hình dạng chuẩn trên mọi độ phân giải màn hình điện thoại Android.
-2. `_AnatomyLeaderLinesPainter`: Khi một nhóm cơ được kích hoạt hoặc người dùng chạm chọn trên màn hình, hệ thống vẽ các đường chỉ dẫn vector nối từ điểm neo giải phẫu trên cơ thể tới nhãn tên nhóm cơ ở hai cột bên cạnh. Khối cơ đang chọn được tô màu xanh neon hoặc cam phát sáng nhằm làm nổi bật vùng vận động, đồng thời bên dưới sẽ hiển thị danh sách các bài tập tác động trực tiếp lên nhóm cơ đó.
+1. `_AnatomySilhouettePainter`: Vẽ đường viền bóng hình cơ thể người ở cả hai góc nhìn mặt trước (*Anterior*) và mặt sau (*Posterior*), hỗ trợ hình dáng cơ thể riêng cho Nam giới và Nữ giới. Các khối cơ được định vị bằng hệ tọa độ chuẩn hóa tương đối `Offset(x, y)` trên khung vẽ kích thước $140 \times 280\text{ dp}$, giúp tỷ lệ cơ thể luôn giữ nguyên hình dạng chuẩn trên mọi độ phân giải màn hình điện thoại Android.
+2. `_AnatomyLeaderLinesPainter`: Khi một nhóm cơ được kích hoạt hoặc người dùng chạm chọn trên màn hình, hệ thống vẽ các đường chỉ dẫn vector nối từ điểm neo trên khối cơ tới nhãn tên nhóm cơ ở hai cột bên cạnh. Khối cơ đang chọn được tô màu xanh neon hoặc cam phát sáng nhằm làm nổi bật vùng vận động, đồng thời bên dưới sẽ hiển thị danh sách các bài tập tác động trực tiếp lên nhóm cơ đó.
 
 ```dart
 class MuscleGroupInfo {
@@ -161,8 +161,8 @@ class MuscleGroupInfo {
 ```
 (Nguồn: lib/widgets/muscle_anatomy_map_widget.dart:9-31)
 
-![Hình 4.3: Giao diện danh mục bài tập và mô hình cơ bắp giải phẫu](img/chup-workout-anatomy.png)
-> CHỤP: Tab Luyện tập (tab 2) / hiển thị mô hình giải phẫu cơ thể với các nhóm cơ được tô màu và danh sách bài tập / chuyển sang tab Workout.
+![Hình 4.3: Giao diện danh mục bài tập và mô hình cấu trúc cơ](img/chup-workout-anatomy.png)
+> CHỤP: Tab Luyện tập (tab 2) / hiển thị mô hình cấu trúc cơ với các nhóm cơ được tô màu và danh sách bài tập / chuyển sang tab Workout.
 
 ### 4.2.3. Quản lý buổi tập, bấm giờ nghỉ ngơi và lưu lịch sử hiệp tập vào SQLite
 

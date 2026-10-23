@@ -3,7 +3,7 @@
 """
 verify_report.py - Kịch bản kiểm định độc lập tài liệu báo cáo Word ADRnangcaobaocao_v4.docx.
 Kiểm tra toàn diện:
-1. Quy chuẩn cỡ chữ (14pt Normal/List, >=11pt Code/Table/Caption, Headings nguyên vẹn, 0 run < 11pt).
+1. Quy chuẩn cỡ chữ (14pt Normal/List, >=11pt Code/Table, Caption 13pt Times New Roman, Headings nguyên vẹn, 0 run < 11pt).
 2. Quy chuẩn độ rộng bảng (WordprocessingML fixed layout, <w:tblGrid>, <w:tcW>, không cột nào < 2.0cm trừ STT, tổng 16.0cm).
 3. Liêm chính tài liệu gốc và mã nguồn.
 """
@@ -48,7 +48,7 @@ def run_verification():
     small_runs = []
     runs_14pt = 0
     runs_code_ge11 = 0
-    runs_caption_11 = 0
+    runs_caption_13 = 0
     normal_paragraphs_14pt = 0
     normal_paragraphs_other = 0
 
@@ -78,8 +78,8 @@ def run_verification():
                 runs_14pt += 1
             if r.font.name == 'Consolas' and sz is not None and sz >= 11.0:
                 runs_code_ge11 += 1
-            if s_name == 'Caption' and sz is not None and sz == 11.0:
-                runs_caption_11 += 1
+            if s_name == 'Caption' and sz == 13.0 and r.font.name == 'Times New Roman':
+                runs_caption_13 += 1
 
     for t_idx, t in enumerate(doc.tables):
         for r_idx, row in enumerate(t.rows):
@@ -94,7 +94,7 @@ def run_verification():
 
     print(f"  + Số run chuẩn 14pt (Normal/List): {runs_14pt} runs (Đạt yêu cầu)")
     print(f"  + Số run mã nguồn Consolas >= 11pt: {runs_code_ge11} runs (Đạt yêu cầu)")
-    print(f"  + Số run chú thích Caption 11pt: {runs_caption_11} runs (Đạt yêu cầu)")
+    print(f"  + Số run chú thích Caption 13pt Times New Roman: {runs_caption_13} runs (Đạt yêu cầu)")
     print(f"  + Số run nhỏ hơn 11pt (< 11pt): {len(small_runs)} vi phạm")
 
     if small_runs:

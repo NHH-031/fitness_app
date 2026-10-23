@@ -3,7 +3,7 @@
 - **Thời điểm thực thi**: 2026-10-11T03:00:00Z
 - **Tệp nguồn mẫu gốc**: `docs/report/goc/ADRnangcaobaocao.docx` (Bảo toàn 100%, không sửa đổi)
 - **Tệp đích tạo lập**: `docs/report/ADRnangcaobaocao_v4.docx`
-- **Kích thước file kết quả**: 12,786,403 bytes
+- **Kích thước file kết quả**: 12,789,023 bytes
 
 ## 1. Thông Số Cấu Trúc Tài Liệu Đã Dựng
 
@@ -49,7 +49,7 @@
 - Hình 3.8: Kiểm tra trạng thái Foreground Service bằng lệnh adb dumpsys
 - Hình 4.1: Biểu đồ năng lượng 24 giờ trên Dashboard
 - Hình 4.2: Giao diện màn hình Dashboard tổng quan
-- Hình 4.3: Giao diện danh mục bài tập và mô hình cơ bắp giải phẫu
+- Hình 4.3: Giao diện danh mục bài tập và mô hình cấu trúc cơ
 - Hình 4.4: Giao diện chi tiết bài tập và ghi nhận hiệp tập
 - Hình 4.5: Gợi ý tăng tiến tải trọng dựa trên buổi tập trước
 - Hình 4.6: Hộp thoại tổng kết khi hoàn thành bài tập
@@ -81,18 +81,18 @@
 - **Khổ giấy**: A4 (21.0 cm × 29.7 cm)
 - **Lề trang chuẩn**: Trái 3.0 cm (chuẩn 3.0 cm), Phải 2.0 cm (chuẩn 2.0 cm), Trên 2.5 cm (chuẩn 2.5 cm), Dưới 2.0 cm (chuẩn 2.0 cm) -> ✅ **Khớp 100%**
 - **Trường mục lục**: Đã giữ nguyên trường `TOC \o "1-3" \h \z \u` từ file gốc
-- **Danh mục hình ảnh**: Đã chèn trường động `TOC \h \z \t "caption,1"`
+- **Danh mục hình ảnh**: Đã chèn trường động `TOC \h \z \t "caption,4"`
 - **Cài đặt cập nhật trường**: Đã kích hoạt `<w:updateFields w:val="true"/>` trong `word/settings.xml`
 
 ## 6. Kiểm Tra Quy Chuẩn Cỡ Chữ (Font Size Standards)
 
 | Tiêu chuẩn định dạng | Quy chuẩn kỹ thuật | Kết quả ghi nhận | Trạng thái |
 |---|---|:---:|:---:|
-| **Nội dung văn bản (Normal & List)** | Cỡ chữ 14pt (`Pt(14)`) | **1932 runs** | ✅ ĐẠT |
-| **Từ khóa & Code (Consolas)** | Tối thiểu 11pt, inline 12pt (`Pt(11)`/`Pt(12)`) | **1090 runs** (tất cả ≥ 11pt) | ✅ ĐẠT |
+| **Nội dung văn bản (Normal & List)** | Cỡ chữ 14pt (`Pt(14)`) | **1938 runs** | ✅ ĐẠT |
+| **Từ khóa & Code (Consolas)** | Tối thiểu 11pt, inline 12pt (`Pt(11)`/`Pt(12)`) | **1096 runs** (tất cả ≥ 11pt) | ✅ ĐẠT |
 | **Từ khóa sót backtick chưa parse** | Tuyệt đối 0 ký tự backtick sót ngoài code | **0 vi phạm** | ✅ ĐẠT |
 | **Bảng biểu dữ liệu** | Tối thiểu 11pt (`Pt(11)`) | **1194 runs** (tất cả ≥ 11pt) | ✅ ĐẠT |
-| **Chú thích hình/bảng (Caption)** | Cỡ chữ 11pt (`Pt(11)`) | **51 runs** (tất cả ≥ 11pt) | ✅ ĐẠT |
+| **Chú thích hình/bảng (Caption)** | Times New Roman 13pt (`Pt(13)`) | **51 runs** (tất cả ≥ 11pt) | ✅ ĐẠT |
 | **Thành phần dưới 11pt (< 11pt)** | Tuyệt đối loại bỏ cỡ 9.5pt, 10pt cũ | **0 vi phạm** | ✅ ĐẠT |
 | **Cấp tiêu đề (Headings 1-4)** | Bảo toàn nguyên vẹn kiểu dáng & cỡ chữ | **10 H1, 38 H2, 51 H3, 1 H4** | ✅ ĐẠT |
 
@@ -137,7 +137,7 @@
 |:---:|---|:---:|:---:|:---:|:---:|:---:|:---:|
 | 1 | Hình 1.1: Kiến trúc phân tầng cảm biến Android (so-do-kien-truc-sensor-android.png) | Ngang / Vuông | **15.80 cm** | **4.70 cm** | 3.36 | Giữa trang | ✅ ĐẠT |
 | 2 | Hình 1.2: Cơ chế Platform Channel Flutter - Native (so-do-platform-channel.png) | Ngang / Vuông | **15.80 cm** | **9.77 cm** | 1.62 | Giữa trang | ✅ ĐẠT |
-| 3 | Hình 2.1: Sơ đồ Use Case tổng thể hệ thống (so-do-use-case.png) | Ngang / Vuông | **15.80 cm** | **16.26 cm** | 0.97 | Giữa trang | ✅ ĐẠT |
+| 3 | Hình 2.1: Sơ đồ Use Case tổng thể hệ thống (so-do-use-case.png) | Ngang / Vuông | **15.80 cm** | **16.53 cm** | 0.96 | Giữa trang | ✅ ĐẠT |
 | 4 | Hình 2.2: Kiến trúc tổng thể phân tầng Local-First (kien-truc-tong-the.png) | Ngang / Vuông | **15.80 cm** | **5.76 cm** | 2.74 | Giữa trang | ✅ ĐẠT |
 | 5 | Hình 2.3: Sơ đồ quan hệ thực thể ERD SQLite (erd-sqlite.png) | Ngang / Vuông | **15.80 cm** | **10.62 cm** | 1.49 | Giữa trang | ✅ ĐẠT |
 | 6 | Hình 2.4: Sơ đồ luồng điều hướng & xác thực (luong-dieu-huong.png) | Ngang / Vuông | **15.80 cm** | **5.42 cm** | 2.92 | Giữa trang | ✅ ĐẠT |
